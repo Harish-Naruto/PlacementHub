@@ -19,14 +19,7 @@ const limiter = rateLimit({
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow any localhost:5173-5179 (Vite dev) and no-origin (curl/Postman)
-      if (!origin || /^http:\/\/localhost:517\d$/.test(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS: origin ${origin} not allowed`));
-      }
-    },
+    origin: "http://localhost:5174",
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   }),
