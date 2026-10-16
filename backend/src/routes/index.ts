@@ -1,5 +1,7 @@
 import { Router } from "express";
 import authRoutes from "./auth.routes.ts";
+import recruiterRoutes from "./recruiter.routes.ts";
+import skillsRoutes from "./skills.routes.ts";
 
 export default function routes() {
   const router = Router();
@@ -9,6 +11,8 @@ export default function routes() {
   });
 
   router.use("/auth", authRoutes);
+  router.use("/recruiters", recruiterRoutes);
+  router.use("/skills", skillsRoutes);
 
   return router;
 }
