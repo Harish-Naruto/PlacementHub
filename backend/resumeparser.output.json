@@ -1,0 +1,761 @@
+{
+    "error": false,
+    "data": {
+        "id": "5d006ca6-91e0-4564-92ef-90eedb3c4944",
+        "resume": {
+            "schema_version": "1.0",
+            "skills": [
+                {
+                    "name": "C++",
+                    "canonical_name": "C++",
+                    "category": "Languages",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Languages: C++, Java, JavaScript, TypeScript, SQL",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Java",
+                    "canonical_name": "Java",
+                    "category": "Languages",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Languages: C++, Java, JavaScript, TypeScript, SQL",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "JavaScript",
+                    "canonical_name": "JavaScript",
+                    "category": "Languages",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Languages: C++, Java, JavaScript, TypeScript, SQL",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "TypeScript",
+                    "canonical_name": "TypeScript",
+                    "category": "Languages",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Languages: C++, Java, JavaScript, TypeScript, SQL",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "SQL",
+                    "canonical_name": "SQL",
+                    "category": "Languages",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Languages: C++, Java, JavaScript, TypeScript, SQL",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "HTML",
+                    "canonical_name": "HTML",
+                    "category": "Frontend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Frontend: HTML, CSS, Next.js, React.js, Tailwind CSS, Redux, Zustand, Tanstack Query",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "CSS",
+                    "canonical_name": "CSS",
+                    "category": "Frontend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Frontend: HTML, CSS, Next.js, React.js, Tailwind CSS, Redux, Zustand, Tanstack Query",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Next.js",
+                    "canonical_name": "Next.js",
+                    "category": "Frontend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Frontend: HTML, CSS, Next.js, React.js, Tailwind CSS, Redux, Zustand, Tanstack Query",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "React.js",
+                    "canonical_name": "React",
+                    "category": "Frontend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Frontend: HTML, CSS, Next.js, React.js, Tailwind CSS, Redux, Zustand, Tanstack Query",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Tailwind CSS",
+                    "canonical_name": "Tailwind CSS",
+                    "category": "Frontend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Frontend: HTML, CSS, Next.js, React.js, Tailwind CSS, Redux, Zustand, Tanstack Query",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Redux",
+                    "canonical_name": "Redux",
+                    "category": "Frontend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Frontend: HTML, CSS, Next.js, React.js, Tailwind CSS, Redux, Zustand, Tanstack Query",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Zustand",
+                    "canonical_name": "Zustand",
+                    "category": "Frontend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Frontend: HTML, CSS, Next.js, React.js, Tailwind CSS, Redux, Zustand, Tanstack Query",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Tanstack Query",
+                    "canonical_name": "TanStack Query",
+                    "category": "Frontend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Frontend: HTML, CSS, Next.js, React.js, Tailwind CSS, Redux, Zustand, Tanstack Query",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Node.js",
+                    "canonical_name": "Node.js",
+                    "category": "Backend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Backend: Node.js, Express.js, REST APIs, WebSockets",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Express.js",
+                    "canonical_name": "Express.js",
+                    "category": "Backend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Backend: Node.js, Express.js, REST APIs, WebSockets",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "REST APIs",
+                    "canonical_name": "REST API",
+                    "category": "Backend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Backend: Node.js, Express.js, REST APIs, WebSockets",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "WebSockets",
+                    "canonical_name": "WebSocket",
+                    "category": "Backend",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Backend: Node.js, Express.js, REST APIs, WebSockets",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "PostgreSQL",
+                    "canonical_name": "PostgreSQL",
+                    "category": "Databases & ORM",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Databases & ORM: PostgreSQL, MongoDB, Prisma ORM",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "MongoDB",
+                    "canonical_name": "MongoDB",
+                    "category": "Databases & ORM",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Databases & ORM: PostgreSQL, MongoDB, Prisma ORM",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Prisma ORM",
+                    "canonical_name": "Prisma",
+                    "category": "Databases & ORM",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Databases & ORM: PostgreSQL, MongoDB, Prisma ORM",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Git",
+                    "canonical_name": "Git",
+                    "category": "Developer Tools",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Developer Tools: Git, GitHub, VS Code, Postman, Bun, npm",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "GitHub",
+                    "canonical_name": "GitHub",
+                    "category": "Developer Tools",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Developer Tools: Git, GitHub, VS Code, Postman, Bun, npm",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "VS Code",
+                    "canonical_name": "VS Code",
+                    "category": "Developer Tools",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Developer Tools: Git, GitHub, VS Code, Postman, Bun, npm",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Postman",
+                    "canonical_name": "Postman",
+                    "category": "Developer Tools",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Developer Tools: Git, GitHub, VS Code, Postman, Bun, npm",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Bun",
+                    "canonical_name": "Bun",
+                    "category": "Developer Tools",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Developer Tools: Git, GitHub, VS Code, Postman, Bun, npm",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "npm",
+                    "canonical_name": "npm",
+                    "category": "Developer Tools",
+                    "claim_type": "listed_skill",
+                    "evidence": [
+                        {
+                            "section": "TECHNICAL SKILLS",
+                            "text": "Developer Tools: Git, GitHub, VS Code, Postman, Bun, npm",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Next.js",
+                    "canonical_name": "Next.js",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "COC Ecosystem | Next.js, Express.js, PostgreSQL, Supabase, TypeScript",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Express.js",
+                    "canonical_name": "Express.js",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "COC Ecosystem | Next.js, Express.js, PostgreSQL, Supabase, TypeScript",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "PostgreSQL",
+                    "canonical_name": "PostgreSQL",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "COC Ecosystem | Next.js, Express.js, PostgreSQL, Supabase, TypeScript",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Supabase",
+                    "canonical_name": "Supabase",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "COC Ecosystem | Next.js, Express.js, PostgreSQL, Supabase, TypeScript",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "TypeScript",
+                    "canonical_name": "TypeScript",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "COC Ecosystem | Next.js, Express.js, PostgreSQL, Supabase, TypeScript",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "MERN Stack",
+                    "canonical_name": "MERN Stack",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "Web-Escape | MERN Stack (MongoDB, Express, React, Node.js), Tailwind CSS, Zustand, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "MongoDB",
+                    "canonical_name": "MongoDB",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "Web-Escape | MERN Stack (MongoDB, Express, React, Node.js), Tailwind CSS, Zustand, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Express",
+                    "canonical_name": "Express.js",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "Web-Escape | MERN Stack (MongoDB, Express, React, Node.js), Tailwind CSS, Zustand, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "React",
+                    "canonical_name": "React",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "Web-Escape | MERN Stack (MongoDB, Express, React, Node.js), Tailwind CSS, Zustand, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Node.js",
+                    "canonical_name": "Node.js",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "Web-Escape | MERN Stack (MongoDB, Express, React, Node.js), Tailwind CSS, Zustand, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Tailwind CSS",
+                    "canonical_name": "Tailwind CSS",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "Web-Escape | MERN Stack (MongoDB, Express, React, Node.js), Tailwind CSS, Zustand, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Zustand",
+                    "canonical_name": "Zustand",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "Web-Escape | MERN Stack (MongoDB, Express, React, Node.js), Tailwind CSS, Zustand, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "JWT",
+                    "canonical_name": "JSON Web Token",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "Web-Escape | MERN Stack (MongoDB, Express, React, Node.js), Tailwind CSS, Zustand, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Framer Motion",
+                    "canonical_name": "Framer Motion",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "utilizing React, Tailwind CSS, and Framer Motion for an immersive UI.",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Next.js",
+                    "canonical_name": "Next.js",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "GrievanceHUB | Next.js, Express, PostgreSQL, Prisma, Redis, Google Gemini, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Express",
+                    "canonical_name": "Express.js",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "GrievanceHUB | Next.js, Express, PostgreSQL, Prisma, Redis, Google Gemini, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "PostgreSQL",
+                    "canonical_name": "PostgreSQL",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "GrievanceHUB | Next.js, Express, PostgreSQL, Prisma, Redis, Google Gemini, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Prisma",
+                    "canonical_name": "Prisma",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "GrievanceHUB | Next.js, Express, PostgreSQL, Prisma, Redis, Google Gemini, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Redis",
+                    "canonical_name": "Redis",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "GrievanceHUB | Next.js, Express, PostgreSQL, Prisma, Redis, Google Gemini, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Google Gemini",
+                    "canonical_name": "Google Gemini",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "GrievanceHUB | Next.js, Express, PostgreSQL, Prisma, Redis, Google Gemini, JWT",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "JWT",
+                    "canonical_name": "JSON Web Token",
+                    "category": null,
+                    "claim_type": "project_technology",
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "GrievanceHUB | Next.js, Express, PostgreSQL, Prisma, Redis, Google Gemini, JWT",
+                            "page": 1
+                        }
+                    ]
+                }
+            ],
+            "projects": [
+                {
+                    "name": "COC Ecosystem",
+                    "description": null,
+                    "role": null,
+                    "technologies": [
+                        "Next.js",
+                        "Express.js",
+                        "PostgreSQL",
+                        "Supabase",
+                        "TypeScript",
+                        "Express"
+                    ],
+                    "features": [
+                        {
+                            "claim": "Architected a centralized backend API using Express, and TypeScript to manage user verification, content moderation, and platform data across callofcode.in, members.callofcode.in, and admins.callofcode.in.",
+                            "evidence_text": "Architected a centralized backend API using Express, and TypeScript to manage user verification, content moderation, and platform data across callofcode.in, members.callofcode.in, and admins.callofcode.in."
+                        },
+                        {
+                            "claim": "Designed scalable PostgreSQL schemas via Supabase to efficiently process and query member profiles, roles, and project histories.",
+                            "evidence_text": "Designed scalable PostgreSQL schemas via Supabase to efficiently process and query member profiles, roles, and project histories."
+                        },
+                        {
+                            "claim": "Built RESTful endpoints with structured middleware and validation layers to reliably serve multiple Next.js client portals.",
+                            "evidence_text": "Built RESTful endpoints with structured middleware and validation layers to reliably serve multiple Next.js client portals."
+                        }
+                    ],
+                    "repository_urls": [],
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "COC Ecosystem | Next.js, Express.js, PostgreSQL, Supabase, TypeScript GitHub | Live",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Web-Escape",
+                    "description": null,
+                    "role": null,
+                    "technologies": [
+                        "MERN Stack",
+                        "MongoDB",
+                        "Express",
+                        "React",
+                        "Node.js",
+                        "Tailwind CSS",
+                        "Zustand",
+                        "JWT",
+                        "Framer Motion",
+                        "Express.js"
+                    ],
+                    "features": [
+                        {
+                            "claim": "Developed a full-stack escape room game with 10 tiered difficulty levels, utilizing React, Tailwind CSS, and Framer Motion for an immersive UI.",
+                            "evidence_text": "Developed a full-stack escape room game with 10 tiered difficulty levels, utilizing React, Tailwind CSS, and Framer Motion for an immersive UI."
+                        },
+                        {
+                            "claim": "Engineered core game mechanics, including timers, penalty systems, and live leaderboards, supported by RESTful APIs Express.js and MongoDB .",
+                            "evidence_text": "Engineered core game mechanics, including timers, penalty systems, and live leaderboards, supported by RESTful APIs Express.js and MongoDB ."
+                        },
+                        {
+                            "claim": "Secured user sessions, real-time progress tracking, and protected routing via JWT authentication.",
+                            "evidence_text": "Secured user sessions, real-time progress tracking, and protected routing via JWT authentication."
+                        }
+                    ],
+                    "repository_urls": [],
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "Web-Escape | MERN Stack (MongoDB, Express, React, Node.js), Tailwind CSS, Zustand, JWT GitHub | Live",
+                            "page": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "GrievanceHUB",
+                    "description": null,
+                    "role": null,
+                    "technologies": [
+                        "Next.js",
+                        "Express",
+                        "PostgreSQL",
+                        "Prisma",
+                        "Redis",
+                        "Google Gemini",
+                        "JWT"
+                    ],
+                    "features": [
+                        {
+                            "claim": "Engineered an AI-driven complaint resolution platform leveraging Google Gemini for automated categorization and sentiment-based urgency detection.",
+                            "evidence_text": "Engineered an AI-driven complaint resolution platform leveraging Google Gemini for automated categorization and sentiment-based urgency detection."
+                        },
+                        {
+                            "claim": "Integrated multilingual processing and entity extraction to streamline and prioritize citizen grievance submissions.",
+                            "evidence_text": "Integrated multilingual processing and entity extraction to streamline and prioritize citizen grievance submissions."
+                        },
+                        {
+                            "claim": "Constructed a high-performance backend architecture utilizing Express, PostgreSQL, Prisma, and Redis, paired with secure Next.js dashboards.",
+                            "evidence_text": "Constructed a high-performance backend architecture utilizing Express, PostgreSQL, Prisma, and Redis, paired with secure Next.js dashboards."
+                        }
+                    ],
+                    "repository_urls": [],
+                    "evidence": [
+                        {
+                            "section": "PROJECTS",
+                            "text": "GrievanceHUB | Next.js, Express, PostgreSQL, Prisma, Redis, Google Gemini, JWT Github",
+                            "page": 1
+                        }
+                    ]
+                }
+            ],
+            "experience": [
+                {
+                    "organization": "Call of Code (Programming Club)",
+                    "title": "Club Representative",
+                    "start_date": "March 2025",
+                    "end_date": null,
+                    "is_current": true,
+                    "responsibilities": [
+                        "Organized technical events, including hackathons and coding contests, managing end-to-end planning and execution.",
+                        "Coordinated with domain heads to handle event logistics and ensure smooth daily club operations.",
+                        "Guided junior members in problem-solving, coding practices, and collaborative project development to build their technical skills."
+                    ],
+                    "technologies": [],
+                    "evidence": [
+                        {
+                            "section": "EXPERIENCE",
+                            "text": "Club Representative March 2025 – Present\nCall of Code (Programming Club)",
+                            "page": 1
+                        }
+                    ]
+                }
+            ],
+            "links": {
+                "github_profiles": [],
+                "github_repositories": [],
+                "portfolios": []
+            }
+        }
+    }
+}

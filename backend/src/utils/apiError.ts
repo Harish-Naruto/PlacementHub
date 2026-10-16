@@ -17,6 +17,10 @@ export class ApiError extends Error {
     this.code = code;
     Error.captureStackTrace(this, this.constructor);
   }
+
+  public get status(): number {
+    return this.statusCode;
+  }
 }
 
 /**

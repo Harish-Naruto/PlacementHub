@@ -19,11 +19,12 @@ const limiter = rateLimit({
 
 app.use(
   cors({
-    origin: config.allowed_origins,
+    origin: "http://localhost:5174",
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   }),
 );
+
 
 app.use(helmet());
 app.use(limiter);
