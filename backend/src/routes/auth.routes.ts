@@ -48,7 +48,7 @@ router.post(
     try {
       const parsed = registerSchema.safeParse(req.body);
       if (!parsed.success) {
-        const message = parsed.error.errors.map((e) => e.message).join(", ");
+        const message = parsed.error.issues.map((e) => e.message).join(", ");
         throw new ApiError(message, 400);
       }
       
@@ -79,7 +79,7 @@ router.post(
     try {
       const parsed = loginSchema.safeParse(req.body);
       if (!parsed.success) {
-        const message = parsed.error.errors.map((e) => e.message).join(", ");
+        const message = parsed.error.issues.map((e) => e.message).join(", ");
         throw new ApiError(message, 400);
       }
 
