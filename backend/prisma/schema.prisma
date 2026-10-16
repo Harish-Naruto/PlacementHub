@@ -19,6 +19,7 @@ model User {
   applicationEvents ApplicationEvent[] @relation("ApplicationEventActor")
   companiesCreated  Company[]          @relation("CompanyCreator")
   recruiterProfile  RecruiterProfile?
+  parsedResumes     ParsedResume[]
   studentProfile    StudentProfile?
   authSessions      AuthSession[]
 
@@ -386,4 +387,23 @@ enum ApplicationStatus {
   HIRED
   REJECTED
   WITHDRAWN
+}
+
+
+// -----------------------------------------------------------------------------
+// Resume parsing
+// -----------------------------------------------------------------------------
+
+// Structured output of the resume parser (skills, projects, experience, links).
+// Read by the assessment generator and GitHub verifier; the raw file is not stored.
+model ParsedResume {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  schemaVersion String   @db.VarChar(20)
+  data          Json
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

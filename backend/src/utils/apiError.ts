@@ -7,12 +7,14 @@ import { NextFunction,Response,Request } from "express";
 export class ApiError extends Error {
   public statusCode: number;
   public isOperational: boolean;
+  public code?: string;
 
-  constructor(message: string, statusCode = 500, isOperational = true) {
+  constructor(message: string, statusCode = 500, isOperational = true, code?: string) {
     super(message);
     this.name = this.constructor.name;
     this.statusCode = statusCode;
     this.isOperational = isOperational;
+    this.code = code;
     Error.captureStackTrace(this, this.constructor);
   }
 }
@@ -23,6 +25,7 @@ export class ApiError extends Error {
 interface ErrorResponse {
   error: boolean;
   message: string;
+  code?: string;
   stack?: string;
 }
 
@@ -47,6 +50,7 @@ export function errorHandler(
   const responseBody: ErrorResponse = {
     error: true,
     message,
+    ...(err instanceof ApiError && err.code ? { code: err.code } : {}),
   };
 
   // Include stack trace in development for debugging
