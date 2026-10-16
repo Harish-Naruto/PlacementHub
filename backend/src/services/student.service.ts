@@ -31,8 +31,12 @@ export async function getStudentProfile(userId: string) {
   });
 
   if (!profile) {
+    const defaultInst = await prisma.institution.findFirst();
     profile = await prisma.studentProfile.create({
-      data: { userId },
+      data: {
+        userId,
+        ...(defaultInst ? { institutionId: defaultInst.id } : {}),
+      },
       include: {
         institution: true,
         skills: { include: { skill: true } },
@@ -50,28 +54,42 @@ export async function getStudentProfile(userId: string) {
 export async function updateStudentProfile(userId: string, input: UpdateProfileInput) {
   // Validate institution if provided
   if (input.institutionId) {
-    const valid = FIXED_INSTITUTIONS.find((i) => i.id === input.institutionId);
-    if (!valid) {
+    let inst = await prisma.institution.findUnique({
+      where: { id: input.institutionId },
+    });
+
+    if (!inst) {
+      const valid = FIXED_INSTITUTIONS.find((i) => i.id === input.institutionId);
+      if (valid) {
+        inst = await prisma.institution.upsert({
+          where: { id: valid.id },
+          update: {},
+          create: {
+            id: valid.id,
+            name: valid.name,
+            slug: valid.slug,
+            city: valid.city,
+            state: valid.state,
+          },
+        });
+      }
+    }
+
+    if (!inst) {
       throw new ApiError("Invalid institution ID", 400);
     }
-    // Ensure it exists in DB
-    await prisma.institution.upsert({
-      where: { id: input.institutionId },
-      update: {},
-      create: {
-        id: valid.id,
-        name: valid.name,
-        slug: valid.slug,
-        city: valid.city,
-        state: valid.state,
-      },
-    });
   }
 
   // Ensure profile exists
   const existing = await prisma.studentProfile.findUnique({ where: { userId } });
   if (!existing) {
-    await prisma.studentProfile.create({ data: { userId } });
+    const defaultInst = input.institutionId || (await prisma.institution.findFirst())?.id;
+    await prisma.studentProfile.create({
+      data: {
+        userId,
+        ...(defaultInst ? { institutionId: defaultInst } : {}),
+      },
+    });
   }
 
   // Allowlisted fields only

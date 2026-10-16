@@ -74,6 +74,11 @@ export async function getStudentSkills(userId: string) {
     id: s.id,
     skillId: s.skillId,
     skillName: s.skill.name,
+    skill: {
+      id: s.skill.id,
+      name: s.skill.name,
+      category: s.skill.category,
+    },
     declaredLevel: s.declaredLevel,
     verificationStatus: s.verificationStatus,
     verificationLabel: mapVerificationStatus(s.verificationStatus),
@@ -87,7 +92,13 @@ export async function getStudentSkills(userId: string) {
 export async function addStudentSkill(userId: string, input: AddSkillInput) {
   let profile = await prisma.studentProfile.findUnique({ where: { userId } });
   if (!profile) {
-    profile = await prisma.studentProfile.create({ data: { userId } });
+    const defaultInst = await prisma.institution.findFirst();
+    profile = await prisma.studentProfile.create({
+      data: {
+        userId,
+        ...(defaultInst ? { institutionId: defaultInst.id } : {}),
+      },
+    });
   }
 
   const skill = await resolveOrCreateSkill(input.skillName);
@@ -113,6 +124,11 @@ export async function addStudentSkill(userId: string, input: AddSkillInput) {
     id: studentSkill.id,
     skillId: studentSkill.skillId,
     skillName: studentSkill.skill.name,
+    skill: {
+      id: studentSkill.skill.id,
+      name: studentSkill.skill.name,
+      category: studentSkill.skill.category,
+    },
     declaredLevel: studentSkill.declaredLevel,
     verificationStatus: studentSkill.verificationStatus,
     verificationLabel: mapVerificationStatus(studentSkill.verificationStatus),

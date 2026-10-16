@@ -21,6 +21,7 @@ import {
   ProjectData,
   JobData,
   ApplicationData,
+  FIXED_INSTITUTIONS,
 } from "../api/student";
 
 export const StudentModule: React.FC = () => {
@@ -28,7 +29,7 @@ export const StudentModule: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"profile" | "resume" | "skills" | "projects" | "jobs" | "applications">("profile");
 
   // Profile state
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>(FIXED_INSTITUTIONS);
   const [profile, setProfile] = useState<StudentProfileData | null>(null);
   const [profileForm, setProfileForm] = useState({
     name: "",
@@ -563,7 +564,7 @@ export const StudentModule: React.FC = () => {
                   <div key={s.id} className="p-4 rounded-2xl bg-white border border-slate-200/70 hover:border-slate-300 transition-all flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-slate-900">{s.skill.name}</span>
+                        <span className="font-bold text-sm text-slate-900">{s.skill?.name || (s as any).skillName || "Skill"}</span>
                         {statusBadge(s.verificationStatus)}
                       </div>
                       <p className="text-xs text-slate-500 mt-1">Level: {s.declaredLevel || "Self-Declared"}</p>

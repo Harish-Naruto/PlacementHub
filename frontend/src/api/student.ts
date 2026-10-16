@@ -36,6 +36,13 @@ export interface Institution {
   state?: string;
 }
 
+export const FIXED_INSTITUTIONS: Institution[] = [
+  { id: "a1b2c3d4-0001-0001-0001-000000000001", name: "D.Y. Patil University", slug: "dpu-pune", city: "Pune", state: "Maharashtra" },
+  { id: "a1b2c3d4-0002-0002-0002-000000000002", name: "Indian Institute of Technology Bombay", slug: "iit-bombay", city: "Mumbai", state: "Maharashtra" },
+  { id: "a1b2c3d4-0003-0003-0003-000000000003", name: "COEP Technological University", slug: "coep-pune", city: "Pune", state: "Maharashtra" },
+  { id: "a1b2c3d4-0004-0004-0004-000000000004", name: "Pune Institute of Computer Technology", slug: "pict-pune", city: "Pune", state: "Maharashtra" },
+];
+
 export interface StudentProfileData {
   id?: string;
   userId?: string;
@@ -106,8 +113,15 @@ export interface ApplicationData {
 // ---------------------------------------------------------------------------
 
 export async function fetchInstitutions(): Promise<Institution[]> {
-  const res = await request<{ error: boolean; data: Institution[] }>("/institutions");
-  return res.data;
+  try {
+    const res = await request<{ error: boolean; data: Institution[] }>("/institutions");
+    if (res.data && res.data.length > 0) {
+      return res.data;
+    }
+    return FIXED_INSTITUTIONS;
+  } catch {
+    return FIXED_INSTITUTIONS;
+  }
 }
 
 export async function fetchStudentProfile(token: string): Promise<StudentProfileData> {

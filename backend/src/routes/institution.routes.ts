@@ -12,12 +12,20 @@ router.get("/", async (_req, res, next) => {
     });
 
     if (institutions.length === 0) {
-      institutions = [...FIXED_INSTITUTIONS] as unknown as typeof institutions;
+      for (const inst of FIXED_INSTITUTIONS) {
+        await prisma.institution.upsert({
+          where: { id: inst.id },
+          update: {},
+          create: { ...inst },
+        });
+      }
+      institutions = await prisma.institution.findMany({
+        orderBy: { name: "asc" },
+      });
     }
 
     res.status(200).json({ error: false, data: institutions });
   } catch (err) {
-    // Fallback to static list on any DB connection lag
     res.status(200).json({ error: false, data: FIXED_INSTITUTIONS });
   }
 });

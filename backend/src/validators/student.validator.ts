@@ -10,25 +10,33 @@ const githubUsernameRegex = /^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$
 // ---------------------------------------------------------------------------
 export const updateProfileSchema = z.object({
   name: z.string().min(1).max(160).optional(),
-  institutionId: z.string().uuid("Invalid institution ID").optional().nullable(),
-  branch: z.string().min(1).max(120).optional().nullable(),
-  degree: z.string().min(1).max(120).optional().nullable(),
-  graduationYear: z.number().int().min(2020).max(2035).optional().nullable(),
-  cgpa: z.number().min(0).max(10).optional().nullable(),
+  institutionId: z
+    .preprocess((v) => (v === "" ? null : v), z.string().uuid("Invalid institution ID").nullable())
+    .optional(),
+  branch: z
+    .preprocess((v) => (v === "" ? null : v), z.string().max(120).nullable())
+    .optional(),
+  degree: z
+    .preprocess((v) => (v === "" ? null : v), z.string().max(120).nullable())
+    .optional(),
+  graduationYear: z
+    .preprocess((v) => (v === "" ? null : Number(v)), z.number().int().min(2020).max(2035).nullable())
+    .optional(),
+  cgpa: z
+    .preprocess((v) => (v === "" ? null : Number(v)), z.number().min(0).max(10).nullable())
+    .optional(),
   githubUsername: z
-    .string()
-    .min(1)
-    .max(39)
-    .regex(githubUsernameRegex, "Invalid GitHub username format")
-    .optional()
-    .nullable(),
+    .preprocess(
+      (v) => (v === "" ? null : v),
+      z.string().max(39).regex(githubUsernameRegex, "Invalid GitHub username format").nullable(),
+    )
+    .optional(),
   linkedinUrl: z
-    .string()
-    .url("Must be a valid URL")
-    .max(2048)
-    .optional()
-    .nullable(),
-  bio: z.string().max(1000).optional().nullable(),
+    .preprocess((v) => (v === "" ? null : v), z.string().url("Must be a valid URL").max(2048).nullable())
+    .optional(),
+  bio: z
+    .preprocess((v) => (v === "" ? null : v), z.string().max(1000).nullable())
+    .optional(),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
@@ -56,19 +64,21 @@ export type UpdateSkillInput = z.infer<typeof updateSkillSchema>;
 export const createProjectSchema = z.object({
   title: z.string().min(1).max(200).trim(),
   description: z.string().min(1).max(3000).trim(),
-  personalContribution: z.string().max(1000).optional().nullable(),
+  personalContribution: z
+    .preprocess((v) => (v === "" ? null : v), z.string().max(1000).nullable())
+    .optional(),
   repositoryUrl: z
-    .string()
-    .url("Must be a valid URL")
-    .max(2048)
-    .optional()
-    .nullable(),
+    .preprocess(
+      (v) => (v === "" ? null : v),
+      z.string().url("Must be a valid URL").max(2048).nullable(),
+    )
+    .optional(),
   demoUrl: z
-    .string()
-    .url("Must be a valid URL")
-    .max(2048)
-    .optional()
-    .nullable(),
+    .preprocess(
+      (v) => (v === "" ? null : v),
+      z.string().url("Must be a valid URL").max(2048).nullable(),
+    )
+    .optional(),
   skillNames: z.array(z.string().min(1).max(120)).max(20).optional().default([]),
   status: z.enum(["DRAFT", "SUBMITTED"]).optional().default("DRAFT"),
 });

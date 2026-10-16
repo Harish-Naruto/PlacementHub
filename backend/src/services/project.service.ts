@@ -54,35 +54,40 @@ export async function getProject(userId: string, projectId: string) {
 export async function createProject(userId: string, input: CreateProjectInput) {
   let profile = await prisma.studentProfile.findUnique({ where: { userId } });
   if (!profile) {
-    profile = await prisma.studentProfile.create({ data: { userId } });
+    const defaultInst = await prisma.institution.findFirst();
+    profile = await prisma.studentProfile.create({
+      data: {
+        userId,
+        ...(defaultInst ? { institutionId: defaultInst.id } : {}),
+      },
+    });
   }
 
   const skillNames = input.skillNames ?? [];
 
-  return prisma.$transaction(async (tx) => {
-    const project = await tx.project.create({
-      data: {
-        studentProfileId: profile.id,
-        title: input.title,
-        description: input.description,
-        personalContribution: input.personalContribution ?? null,
-        repositoryUrl: input.repositoryUrl ?? null,
-        demoUrl: input.demoUrl ?? null,
-        status: input.status ?? "DRAFT",
+  // Resolve all skills before writing (avoids multiple network roundtrips inside a transaction)
+  const resolvedSkills = await Promise.all(
+    skillNames.map((name) => resolveOrCreateSkill(name)),
+  );
+
+  return prisma.project.create({
+    data: {
+      studentProfileId: profile.id,
+      title: input.title,
+      description: input.description,
+      personalContribution: input.personalContribution ?? null,
+      repositoryUrl: input.repositoryUrl ?? null,
+      demoUrl: input.demoUrl ?? null,
+      status: input.status ?? "DRAFT",
+      skills: {
+        create: resolvedSkills.map((skill) => ({
+          skillId: skill.id,
+        })),
       },
-    });
-
-    for (const name of skillNames) {
-      const skill = await resolveOrCreateSkill(name);
-      await tx.projectSkill.create({
-        data: { projectId: project.id, skillId: skill.id },
-      }).catch(() => {}); // Skip duplicate
-    }
-
-    return tx.project.findUnique({
-      where: { id: project.id },
-      include: { skills: { include: { skill: true } } },
-    });
+    },
+    include: {
+      skills: { include: { skill: true } },
+    },
   });
 }
 
@@ -104,35 +109,42 @@ export async function updateProject(
 
   const skillNames = input.skillNames ?? [];
 
-  return prisma.$transaction(async (tx) => {
-    await tx.project.update({
-      where: { id: projectId },
-      data: {
-        ...(input.title && { title: input.title }),
-        ...(input.description && { description: input.description }),
-        ...(input.personalContribution !== undefined && { personalContribution: input.personalContribution }),
-        ...(input.repositoryUrl !== undefined && { repositoryUrl: input.repositoryUrl }),
-        ...(input.demoUrl !== undefined && { demoUrl: input.demoUrl }),
-        ...(input.status && { status: input.status }),
-      },
-    });
+  // Resolve skills outside of transaction
+  const resolvedSkills = input.skillNames !== undefined
+    ? await Promise.all(skillNames.map((name) => resolveOrCreateSkill(name)))
+    : null;
 
-    if (input.skillNames !== undefined) {
-      // Replace tech stack
-      await tx.projectSkill.deleteMany({ where: { projectId } });
-      for (const name of skillNames) {
-        const skill = await resolveOrCreateSkill(name);
-        await tx.projectSkill.create({
-          data: { projectId, skillId: skill.id },
-        }).catch(() => {});
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.project.update({
+        where: { id: projectId },
+        data: {
+          ...(input.title && { title: input.title }),
+          ...(input.description && { description: input.description }),
+          ...(input.personalContribution !== undefined && { personalContribution: input.personalContribution }),
+          ...(input.repositoryUrl !== undefined && { repositoryUrl: input.repositoryUrl }),
+          ...(input.demoUrl !== undefined && { demoUrl: input.demoUrl }),
+          ...(input.status && { status: input.status }),
+        },
+      });
+
+      if (resolvedSkills) {
+        await tx.projectSkill.deleteMany({ where: { projectId } });
+        if (resolvedSkills.length > 0) {
+          await tx.projectSkill.createMany({
+            data: resolvedSkills.map((s) => ({ projectId, skillId: s.id })),
+            skipDuplicates: true,
+          });
+        }
       }
-    }
 
-    return tx.project.findUnique({
-      where: { id: projectId },
-      include: { skills: { include: { skill: true } } },
-    });
-  });
+      return tx.project.findUnique({
+        where: { id: projectId },
+        include: { skills: { include: { skill: true } } },
+      });
+    },
+    { timeout: 20000, maxWait: 10000 },
+  );
 }
 
 // ---------------------------------------------------------------------------
