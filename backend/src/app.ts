@@ -20,7 +20,7 @@ const limiter = rateLimit({
 app.use(
   cors({
     origin: config.allowed_origins,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   }),
 );
