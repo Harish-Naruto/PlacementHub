@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAssessment } from '../hooks/useAssessment';
-import { ResumeSelectScreen, ResumePreviewScreen, ConfigScreen } from '../components/ResumeScreens';
+import { ResumeSelectScreen, ResumePreviewScreen } from '../components/ResumeScreens';
 import { Timer, QuestionNav, QuestionCard } from '../components/AssessmentComponents';
 import { ResultsScreen } from '../components/ResultsScreen';
 import { Button, LoadingSpinner } from '../components/ui';
@@ -52,10 +52,10 @@ const SubmittingScreen: React.FC = () => (
 interface ErrorScreenProps {
     message: string;
     onRetry: () => void;
-    onBackToConfig?: () => void;
+    onBack?: () => void;
 }
 
-const ErrorScreen: React.FC<ErrorScreenProps> = ({ message, onRetry, onBackToConfig }) => (
+const ErrorScreen: React.FC<ErrorScreenProps> = ({ message, onRetry, onBack }) => (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 max-w-md mx-auto text-center">
         <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-3xl">
             ⚠
@@ -68,9 +68,9 @@ const ErrorScreen: React.FC<ErrorScreenProps> = ({ message, onRetry, onBackToCon
             <Button id="retry-btn" onClick={onRetry} variant="primary" size="md">
                 Try Again
             </Button>
-            {onBackToConfig && (
-                <Button id="back-config-btn" onClick={onBackToConfig} variant="secondary" size="md">
-                    Change Settings
+            {onBack && (
+                <Button id="back-resume-btn" onClick={onBack} variant="secondary" size="md">
+                    Back to Resume
                 </Button>
             )}
         </div>
@@ -206,7 +206,7 @@ interface AssessmentPageProps {
 }
 
 const AssessmentPage: React.FC<AssessmentPageProps> = ({ onBack }) => {
-    const { state, selectResume, upload, goToConfig, updateConfig, startGeneration, setAnswer, handleSubmit, restart, goBack } =
+    const { state, selectResume, upload, startGeneration, setAnswer, handleSubmit, restart, goBack } =
         useAssessment();
 
     const renderContent = () => {
@@ -226,20 +226,11 @@ const AssessmentPage: React.FC<AssessmentPageProps> = ({ onBack }) => {
                 return (
                     <ResumePreviewScreen
                         resume={state.selectedResume!}
-                        onProceed={goToConfig}
+                        onProceed={startGeneration}
                         onBack={goBack}
                     />
                 );
             case 'configuring':
-                return (
-                    <ConfigScreen
-                        config={state.config}
-                        onUpdate={updateConfig}
-                        onStart={startGeneration}
-                        onBack={goBack}
-                        isGenerating={false}
-                    />
-                );
             case 'generating':
                 return <GeneratingScreen />;
             case 'attempting':
@@ -259,7 +250,7 @@ const AssessmentPage: React.FC<AssessmentPageProps> = ({ onBack }) => {
                     <ErrorScreen
                         message={state.error ?? 'Unknown error'}
                         onRetry={state.selectedResume ? startGeneration : restart}
-                        onBackToConfig={state.selectedResume ? goToConfig : restart}
+                        onBack={state.selectedResume ? goBack : restart}
                     />
                 );
             default:
@@ -300,12 +291,11 @@ const AssessmentPage: React.FC<AssessmentPageProps> = ({ onBack }) => {
 
                     {/* Breadcrumb steps */}
                     <div className="hidden md:flex items-center gap-1.5 text-xs text-gray-500">
-                        {['Select Resume', 'Preview', 'Configure', 'Assessment', 'Results'].map(
+                        {['Select Resume', 'Preview', 'Assessment', 'Results'].map(
                             (step, i) => {
                                 const phaseOrder = [
                                     'resume_select',
                                     'resume_preview',
-                                    'configuring',
                                     'attempting',
                                     'results',
                                 ];
@@ -326,7 +316,7 @@ const AssessmentPage: React.FC<AssessmentPageProps> = ({ onBack }) => {
                                             {done ? '✓ ' : ''}
                                             {step}
                                         </span>
-                                        {i < 4 && <span>›</span>}
+                                        {i < 3 && <span>›</span>}
                                     </React.Fragment>
                                 );
                             },

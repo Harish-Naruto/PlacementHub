@@ -265,13 +265,13 @@ export const ResumePreviewScreen: React.FC<ResumePreviewProps> = ({ resume, onPr
             </Card>
 
             <Button
-                id="proceed-to-config-btn"
+                id="start-assessment-btn"
                 onClick={onProceed}
                 size="lg"
                 className="w-full"
-                icon={<span>🚀</span>}
+                icon={<span>⚡</span>}
             >
-                Configure & Start Assessment
+                Generate Assessment with AI
             </Button>
         </div>
     );
