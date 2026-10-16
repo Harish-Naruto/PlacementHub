@@ -4,7 +4,9 @@ import sample from '../resumeparser.output.json';
 // Stub Gemini and Prisma before the services are imported.
 let geminiCalls: { prompt: string }[] = [];
 let geminiReply: (prompt: string) => unknown = () => ({});
+const actualGemini = await import('../src/lib/gemini');
 mock.module('../src/lib/gemini', () => ({
+    ...actualGemini,
     generateJSON: async (o: { prompt: string; schema: { parse: (v: unknown) => unknown } }) => {
         geminiCalls.push({ prompt: o.prompt });
         return o.schema.parse(geminiReply(o.prompt));
@@ -106,6 +108,34 @@ describe('generateAssessment', () => {
         await expect(
             generateAssessment(RESUME_ID, 'user-1', { questionCount: 6, difficulty: 'mixed', durationMinutes: 20 }),
         ).rejects.toThrow('valid assessment');
+    });
+
+    test('12 questions generates two batches of 6, unique sequential IDs q1-q12', async () => {
+        geminiReply = () => ({
+            questions: [llmMcq('A'), llmMcq('B'), llmText('short_answer'), llmText('coding'), llmText('scenario'), llmText('debugging')],
+        });
+        const a = await generateAssessment(RESUME_ID, 'user-1', { questionCount: 12, difficulty: 'mixed', durationMinutes: 30 });
+        expect(geminiCalls).toHaveLength(2); // exactly 2 batches
+        expect(a.questions).toHaveLength(12);
+        expect(a.questions.map((q) => q.id)).toEqual([
+            'q1', 'q2', 'q3', 'q4', 'q5', 'q6',
+            'q7', 'q8', 'q9', 'q10', 'q11', 'q12',
+        ]);
+        expect(new Set(a.questions.map((q) => q.id)).size).toBe(12);
+    });
+
+    test('concurrent duplicate requests are deduplicated and share single generation task', async () => {
+        geminiReply = () => ({
+            questions: [llmMcq('A'), llmMcq('B'), llmText('short_answer'), llmText('coding'), llmText('scenario'), llmText('debugging')],
+        });
+        const cfg = { questionCount: 6, difficulty: 'medium' as const, durationMinutes: 20 };
+        // Launch two requests concurrently
+        const [a1, a2] = await Promise.all([
+            generateAssessment(RESUME_ID, 'user-1', cfg),
+            generateAssessment(RESUME_ID, 'user-1', cfg),
+        ]);
+        expect(geminiCalls).toHaveLength(1); // Only 1 call was dispatched to Gemini!
+        expect(a1.questions.map(q => q.id)).toEqual(a2.questions.map(q => q.id));
     });
 
     test('unknown, non-uuid (old mock ids) and other users\' resumes are a 404 and never reach Gemini', async () => {

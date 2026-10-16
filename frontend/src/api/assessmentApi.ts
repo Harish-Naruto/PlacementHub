@@ -7,11 +7,13 @@ const API_BASE = 'http://localhost:4000/api/v1';
 
 
 export class ApiError extends Error {
+    status: number;
     constructor(
-        public status: number,
+        status: number,
         message: string,
     ) {
         super(message);
+        this.status = status;
         this.name = 'ApiError';
     }
 }
@@ -23,33 +25,48 @@ export function setAssessmentToken(token: string | null) {
 }
 
 async function request<T>(path: string, options?: RequestInit, retried = false): Promise<T> {
-    const res = await fetch(`${API_BASE}${path}`, {
-        credentials: 'include', // refresh-token cookie, used for the 401 retry below
-        headers: {
-            // For FormData the browser must set the multipart boundary itself.
-            ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        ...options,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60_000);
 
-    // Access tokens last 15 minutes but an assessment can run longer: refresh once and retry.
-    if (res.status === 401 && !retried) {
-        try {
-            accessToken = (await refreshApi()).data.accessToken;
-            return request<T>(path, options, true);
-        } catch {
-            /* fall through to the original 401 */
+    try {
+        const res = await fetch(`${API_BASE}${path}`, {
+            credentials: 'include', // refresh-token cookie, used for the 401 retry below
+            headers: {
+                // For FormData the browser must set the multipart boundary itself.
+                ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+            signal: controller.signal,
+            ...options,
+        });
+
+        clearTimeout(timeoutId);
+
+        // Access tokens last 15 minutes but an assessment can run longer: refresh once and retry.
+        if (res.status === 401 && !retried) {
+            try {
+                accessToken = (await refreshApi()).data.accessToken;
+                return request<T>(path, options, true);
+            } catch {
+                /* fall through to the original 401 */
+            }
         }
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new ApiError(res.status, data.message ?? 'An unexpected error occurred');
+        }
+
+        return data as T;
+    } catch (err) {
+        clearTimeout(timeoutId);
+        if (err instanceof ApiError) throw err;
+        if ((err as Error)?.name === 'AbortError') {
+            throw new ApiError(504, 'The request timed out. Please try again.');
+        }
+        throw new ApiError(500, (err as Error)?.message ?? 'Network error connecting to server');
     }
-
-    const data = await res.json();
-
-    if (!res.ok) {
-        throw new ApiError(res.status, data.message ?? 'An unexpected error occurred');
-    }
-
-    return data as T;
 }
 
 // ---------------------------------------------------------------------------

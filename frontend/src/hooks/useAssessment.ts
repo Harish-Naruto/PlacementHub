@@ -141,10 +141,11 @@ export function useAssessment() {
     }, []);
 
     const startGeneration = useCallback(async () => {
+        if (!state.selectedResume || state.phase === 'generating') return;
         setState((s) => ({ ...s, phase: 'generating', error: null }));
         try {
             const res = await generateAssessment({
-                resumeId: state.selectedResume!.id,
+                resumeId: state.selectedResume.id,
                 config: state.config,
             });
             setState((s) => ({
@@ -163,7 +164,7 @@ export function useAssessment() {
                 error: err instanceof ApiError ? err.message : 'Failed to generate assessment',
             }));
         }
-    }, [state.selectedResume, state.config]);
+    }, [state.selectedResume, state.config, state.phase]);
 
     const setAnswer = useCallback((questionId: string, answer: string) => {
         setState((s) => ({

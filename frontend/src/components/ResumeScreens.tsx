@@ -286,9 +286,10 @@ interface ConfigScreenProps {
     onUpdate: (patch: Partial<{ questionCount: number; difficulty: 'easy' | 'medium' | 'hard' | 'mixed'; durationMinutes: number }>) => void;
     onStart: () => void;
     onBack: () => void;
+    isGenerating?: boolean;
 }
 
-export const ConfigScreen: React.FC<ConfigScreenProps> = ({ config, onUpdate, onStart, onBack }) => (
+export const ConfigScreen: React.FC<ConfigScreenProps> = ({ config, onUpdate, onStart, onBack, isGenerating = false }) => (
     <div className="max-w-lg mx-auto">
         <button
             onClick={onBack}
@@ -311,14 +312,15 @@ export const ConfigScreen: React.FC<ConfigScreenProps> = ({ config, onUpdate, on
                     id="question-count-slider"
                     type="range"
                     min={3}
-                    max={10}
+                    max={12}
                     value={config.questionCount}
                     onChange={(e) => onUpdate({ questionCount: parseInt(e.target.value) })}
                     className="w-full accent-violet-500"
+                    disabled={isGenerating}
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>3</span>
-                    <span>10</span>
+                    <span>12</span>
                 </div>
             </div>
 
@@ -330,6 +332,7 @@ export const ConfigScreen: React.FC<ConfigScreenProps> = ({ config, onUpdate, on
                         <button
                             key={d}
                             id={`difficulty-${d}`}
+                            disabled={isGenerating}
                             onClick={() => onUpdate({ difficulty: d })}
                             className={`
                 py-2 rounded-xl text-sm font-semibold border transition-all duration-150 capitalize
@@ -359,6 +362,7 @@ export const ConfigScreen: React.FC<ConfigScreenProps> = ({ config, onUpdate, on
                     value={config.durationMinutes}
                     onChange={(e) => onUpdate({ durationMinutes: parseInt(e.target.value) })}
                     className="w-full accent-violet-500"
+                    disabled={isGenerating}
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>10 min</span>
@@ -377,9 +381,11 @@ export const ConfigScreen: React.FC<ConfigScreenProps> = ({ config, onUpdate, on
             onClick={onStart}
             size="lg"
             className="w-full mt-6"
-            icon={<span>⚡</span>}
+            disabled={isGenerating}
+            loading={isGenerating}
+            icon={!isGenerating ? <span>⚡</span> : undefined}
         >
-            Generate Assessment with AI
+            {isGenerating ? 'Generating Assessment with Gemini...' : 'Generate Assessment with AI'}
         </Button>
     </div>
 );

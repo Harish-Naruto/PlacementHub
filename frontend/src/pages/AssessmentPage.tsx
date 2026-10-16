@@ -52,9 +52,10 @@ const SubmittingScreen: React.FC = () => (
 interface ErrorScreenProps {
     message: string;
     onRetry: () => void;
+    onBackToConfig?: () => void;
 }
 
-const ErrorScreen: React.FC<ErrorScreenProps> = ({ message, onRetry }) => (
+const ErrorScreen: React.FC<ErrorScreenProps> = ({ message, onRetry, onBackToConfig }) => (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 max-w-md mx-auto text-center">
         <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-3xl">
             ⚠
@@ -63,9 +64,16 @@ const ErrorScreen: React.FC<ErrorScreenProps> = ({ message, onRetry }) => (
         <p className="text-gray-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl p-4">
             {message}
         </p>
-        <Button id="retry-btn" onClick={onRetry} variant="secondary" size="md">
-            Try Again
-        </Button>
+        <div className="flex gap-3 mt-2">
+            <Button id="retry-btn" onClick={onRetry} variant="primary" size="md">
+                Try Again
+            </Button>
+            {onBackToConfig && (
+                <Button id="back-config-btn" onClick={onBackToConfig} variant="secondary" size="md">
+                    Change Settings
+                </Button>
+            )}
+        </div>
     </div>
 );
 
@@ -229,6 +237,7 @@ const AssessmentPage: React.FC<AssessmentPageProps> = ({ onBack }) => {
                         onUpdate={updateConfig}
                         onStart={startGeneration}
                         onBack={goBack}
+                        isGenerating={false}
                     />
                 );
             case 'generating':
@@ -246,7 +255,13 @@ const AssessmentPage: React.FC<AssessmentPageProps> = ({ onBack }) => {
             case 'results':
                 return <ResultsScreen result={state.result!} onRestart={restart} />;
             case 'error':
-                return <ErrorScreen message={state.error ?? 'Unknown error'} onRetry={restart} />;
+                return (
+                    <ErrorScreen
+                        message={state.error ?? 'Unknown error'}
+                        onRetry={state.selectedResume ? startGeneration : restart}
+                        onBackToConfig={state.selectedResume ? goToConfig : restart}
+                    />
+                );
             default:
                 return null;
         }

@@ -5,9 +5,9 @@ import { z } from 'zod';
 // ---------------------------------------------------------------------------
 
 // Each question costs generation tokens and (for free-text answers) grading work,
-// so the count is kept small; 6 is enough to spot-check a resume's main claims.
+// Default to 6 questions for snappy generation; support up to 12 questions (generated in batches of 6).
 export const DEFAULT_QUESTIONS = 6;
-export const MAX_QUESTIONS = 10;
+export const MAX_QUESTIONS = 12;
 
 export const AssessmentConfigSchema = z.object({
     questionCount: z.number().int().min(3).max(MAX_QUESTIONS).default(DEFAULT_QUESTIONS),
