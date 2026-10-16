@@ -1,4 +1,4 @@
-import { randomBytes, createHash } from "node:crypto";
+import { randomBytes, createHash, randomUUID } from "node:crypto";
 import { hash, verify } from "@node-rs/argon2";
 import { SignJWT, jwtVerify } from "jose";
 import config from "../config/index.ts";
@@ -83,7 +83,7 @@ export async function verifyAccessToken(token: string) {
 async function createSession(userId: string) {
   const rawToken = generateRefreshToken();
   const tokenHashValue = hashToken(rawToken);
-  const familyId = crypto.randomUUID();
+  const familyId = randomUUID();
   const expiresAt = new Date(
     Date.now() + config.refreshTokenTtlDays * 24 * 60 * 60 * 1000,
   );

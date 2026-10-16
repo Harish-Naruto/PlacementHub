@@ -46,7 +46,7 @@ export interface RecruiterProfileData {
 export interface SkillRequirement {
   skillId: string;
   requirementType: "REQUIRED" | "PREFERRED";
-  weight?: number;
+  weight: number;
 }
 
 export interface Skill {
@@ -88,7 +88,7 @@ export interface JobPosting {
   graduationYears?: { graduationYear: number }[];
   skillRequirements?: {
     requirementType: "REQUIRED" | "PREFERRED";
-    weight: string;
+    weight: number;
     skill: { id: string; name: string; category: string | null };
   }[];
 }

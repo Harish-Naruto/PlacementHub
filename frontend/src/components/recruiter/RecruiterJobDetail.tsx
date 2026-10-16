@@ -433,15 +433,16 @@ export const RecruiterJobDetail: React.FC<JobDetailProps> = ({ jobId, onBack }) 
                   <div className="mt-4 flex flex-wrap gap-1.5">
                     {job.skillRequirements.map((sr, i) => (
                       <span
-                        key={i}
-                        className={`text-xs px-2.5 py-1 rounded-lg border ${
+                        key={`${sr.skill.id}-${i}`}
+                        className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border ${
                           sr.requirementType === "REQUIRED"
                             ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
-                            : "bg-white/[0.05] text-slate-400 border-white/10"
+                            : "bg-amber-500/10 text-amber-300 border-amber-500/25"
                         }`}
                       >
                         {sr.skill.name}
-                        {sr.requirementType === "PREFERRED" && <span className="text-slate-600 ml-1">(preferred)</span>}
+                        <span className="text-[9px] opacity-70">{sr.requirementType === "REQUIRED" ? "req" : "pref"}</span>
+                        <span className="text-[9px] opacity-60">×{Number(sr.weight ?? 1).toFixed(1)}</span>
                       </span>
                     ))}
                   </div>
