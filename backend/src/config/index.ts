@@ -60,6 +60,11 @@ const config = {
   rate_limit_window_minutes: () => optionalInt("RATE_LIMIT_WINDOW_MINUTES", 15),
   rate_limit_max_request: () => optionalInt("RATE_LIMIT_MAX_REQUESTS", 100),
 
+  // Resume parsing (Gemini)
+  geminiApiKey: () => required("GEMINI_API_KEY"),
+  geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+  resumeMaxBytes: 5 * 1024 * 1024,
+
   // Database
   databaseUrl: required("DATABASE_URL"),
 

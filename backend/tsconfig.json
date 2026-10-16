@@ -6,7 +6,7 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "moduleDetection": "force",
-    "types": ["jest", "node"],
+    "types": ["jest", "node", "bun"],
 
     // Bun-style ESM imports
     "allowImportingTsExtensions": true,
