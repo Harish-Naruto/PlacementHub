@@ -7,10 +7,13 @@ const configDir = dirname(fileURLToPath(import.meta.url));
 
 dotenv.config({ path: resolve(configDir, ".env") });
 
-const databaseUrl = process.env.DATABASE_URL;
+// For Prisma CLI (migrations), use the session-mode direct URL (port 5432).
+// The pooled DATABASE_URL (port 6543 via PgBouncer) is used at runtime by
+// the PrismaClient in application code, not here.
+const migrationUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is missing from backend/.env");
+if (!migrationUrl) {
+  throw new Error("DIRECT_URL or DATABASE_URL is missing from backend/.env");
 }
 
 export default defineConfig({
@@ -19,6 +22,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: databaseUrl,
+    url: migrationUrl,
   },
 });
