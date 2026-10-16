@@ -1,19 +1,82 @@
-const validateEnvVar = (name: string, value: string | undefined): string => {
-    if (!value) {
-        throw new Error(`${name} is not defined in environment variables`);
-    }
-    return value;
-};
+import dotenv from "dotenv";
+dotenv.config();
 
-export default {
-    port: process.env.PORT || 3000,
-    allowed_origins: process.env.ALLOWED_ORIGINS || '*',
-    rate_limit_window_minutes: () => {
-        if (!process.env.RATE_LIMIT_WINDOW_MINUTES) return 15;
-        return parseInt(process.env.RATE_LIMIT_WINDOW_MINUTES);
-    },
-    rate_limit_max_request: () => {
-        if (!process.env.RATE_LIMIT_MAX_REQUESTS) return 100;
-        return parseInt(process.env.RATE_LIMIT_MAX_REQUESTS);
-    },
-};
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function required(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing required env var: ${name}`);
+  return v;
+}
+
+function optionalInt(name: string, fallback: number): number {
+  const v = process.env[name];
+  if (!v) return fallback;
+  const n = parseInt(v, 10);
+  if (Number.isNaN(n)) throw new Error(`${name} must be a valid integer`);
+  return n;
+}
+
+// ---------------------------------------------------------------------------
+// JWT
+// ---------------------------------------------------------------------------
+
+const jwtAccessSecret = required("JWT_ACCESS_SECRET");
+if (jwtAccessSecret.length < 32) {
+  throw new Error("JWT_ACCESS_SECRET must be at least 32 characters");
+}
+
+const jwtAccessTtl = process.env.JWT_ACCESS_TTL || "15m";
+const jwtIssuer = process.env.JWT_ISSUER || "placementhub";
+const jwtAudience = process.env.JWT_AUDIENCE || "placementhub";
+
+// ---------------------------------------------------------------------------
+// Refresh token
+// ---------------------------------------------------------------------------
+
+const refreshTokenTtlDays = optionalInt("REFRESH_TOKEN_TTL_DAYS", 7);
+
+// ---------------------------------------------------------------------------
+// Recruiter signup
+// ---------------------------------------------------------------------------
+
+const recruiterSignupCode = required("RECRUITER_SIGNUP_CODE");
+
+// ---------------------------------------------------------------------------
+// Export
+// ---------------------------------------------------------------------------
+
+const config = {
+  nodeEnv: process.env.NODE_ENV || "development",
+  port: optionalInt("PORT", 4000),
+  frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
+
+  // CORS
+  allowed_origins: process.env.FRONTEND_URL || "http://localhost:5173",
+
+  // Rate limiting
+  rate_limit_window_minutes: () => optionalInt("RATE_LIMIT_WINDOW_MINUTES", 15),
+  rate_limit_max_request: () => optionalInt("RATE_LIMIT_MAX_REQUESTS", 100),
+
+  // Database
+  databaseUrl: required("DATABASE_URL"),
+
+  // JWT
+  jwtAccessSecret,
+  jwtAccessTtl,
+  jwtIssuer,
+  jwtAudience,
+
+  // Refresh
+  refreshTokenTtlDays,
+
+  // Recruiter
+  recruiterSignupCode,
+
+  // Computed helpers
+  isProduction: () => (process.env.NODE_ENV || "development") === "production",
+} as const;
+
+export default config;

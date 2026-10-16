@@ -35,9 +35,14 @@ export function errorHandler(
   res: Response,
   next: NextFunction,
 ): void {
+  console.error("[API Error]", err);
   const status = err instanceof ApiError ? err.statusCode : 500;
   const message =
-    err instanceof ApiError ? err.message : "Internal Server Error";
+    err instanceof ApiError
+      ? err.message
+      : err instanceof Error
+        ? err.message
+        : "Internal Server Error";
 
   const responseBody: ErrorResponse = {
     error: true,
