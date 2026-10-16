@@ -7,16 +7,10 @@ const configDir = dirname(fileURLToPath(import.meta.url));
 
 dotenv.config({ path: resolve(configDir, ".env") });
 
-// For migrations we need a direct (non-pooled) connection.
-// DIRECT_URL is the session-mode pooler (5432) — preferred for migrations.
-// If 5432 is unreachable we fall back to the transaction-mode pooler (6543)
-// after stripping the pgbouncer=true query param.
-const rawDirect = process.env.DIRECT_URL;
-const rawPooled = process.env.DATABASE_URL
-  ?.replace("?pgbouncer=true", "")
-  .replace("&pgbouncer=true", "");
-
-const migrationUrl = rawDirect || rawPooled;
+// For Prisma CLI (migrations), use the session-mode direct URL (port 5432).
+// The pooled DATABASE_URL (port 6543 via PgBouncer) is used at runtime by
+// the PrismaClient in application code, not here.
+const migrationUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
 
 if (!migrationUrl) {
   throw new Error("DIRECT_URL or DATABASE_URL is missing from backend/.env");
