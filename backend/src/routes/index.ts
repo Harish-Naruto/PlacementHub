@@ -1,6 +1,8 @@
 import { Router } from "express";
 import authRoutes from "./auth.routes.ts";
-import resumeRoutes from "./resume.ts";
+import studentRoutes from "./student.routes.ts";
+import jobRoutes from "./job.routes.ts";
+import institutionRoutes from "./institution.routes.ts";
 
 export default function routes() {
   const router = Router();
@@ -9,9 +11,10 @@ export default function routes() {
     res.status(200).json({ message: "pong", status: "API is working" });
   });
 
-    router.use("/resumes", resumeRoutes);
-
   router.use("/auth", authRoutes);
+  router.use("/students", studentRoutes);
+  router.use("/jobs", jobRoutes);
+  router.use("/institutions", institutionRoutes);
 
   return router;
 }
