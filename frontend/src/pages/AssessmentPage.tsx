@@ -21,7 +21,7 @@ const GeneratingScreen: React.FC = () => (
         <div className="text-center">
             <h2 className="text-2xl font-bold text-white mb-2">Generating Your Assessment</h2>
             <p className="text-gray-400 text-sm max-w-sm">
-                Gemini is analysing the resume and crafting personalised questions. This may take a few
+                Gemini is analysing the resume and crafting personalised questions. This usually takes
                 seconds…
             </p>
         </div>
@@ -38,8 +38,8 @@ const SubmittingScreen: React.FC = () => (
         <div className="text-center">
             <h2 className="text-xl font-bold text-white mb-2">Evaluating Answers</h2>
             <p className="text-gray-400 text-sm max-w-sm">
-                Gemini is reviewing each answer against the grading rubric. This may take up to a minute
-                for a full assessment.
+                Gemini is reviewing your written answers against the answer key. This usually takes
+                a few seconds.
             </p>
         </div>
     </div>
@@ -198,7 +198,7 @@ interface AssessmentPageProps {
 }
 
 const AssessmentPage: React.FC<AssessmentPageProps> = ({ onBack }) => {
-    const { state, selectResume, goToConfig, updateConfig, startGeneration, setAnswer, handleSubmit, restart, goBack } =
+    const { state, selectResume, upload, goToConfig, updateConfig, startGeneration, setAnswer, handleSubmit, restart, goBack } =
         useAssessment();
 
     const renderContent = () => {
@@ -208,7 +208,10 @@ const AssessmentPage: React.FC<AssessmentPageProps> = ({ onBack }) => {
                     <ResumeSelectScreen
                         resumes={state.resumes}
                         loading={state.loadingResumes}
+                        uploading={state.uploading}
+                        error={state.resumeError}
                         onSelect={selectResume}
+                        onUpload={upload}
                     />
                 );
             case 'resume_preview':
@@ -282,7 +285,7 @@ const AssessmentPage: React.FC<AssessmentPageProps> = ({ onBack }) => {
 
                     {/* Breadcrumb steps */}
                     <div className="hidden md:flex items-center gap-1.5 text-xs text-gray-500">
-                        {['Select Profile', 'Preview', 'Configure', 'Assessment', 'Results'].map(
+                        {['Select Resume', 'Preview', 'Configure', 'Assessment', 'Results'].map(
                             (step, i) => {
                                 const phaseOrder = [
                                     'resume_select',

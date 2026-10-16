@@ -54,6 +54,23 @@ router.post('/', handleUpload, async (req, res, next) => {
     }
 });
 
+// GET /api/v1/resumes  (the caller's own parsed resumes, newest first)
+router.get('/', async (req, res, next) => {
+    try {
+        const rows = await prisma.parsedResume.findMany({
+            where: { userId: req.user!.id },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+        });
+        res.json({
+            error: false,
+            data: rows.map((r) => ({ id: r.id, resume: r.data, createdAt: r.createdAt })),
+        });
+    } catch (e) {
+        next(e);
+    }
+});
+
 // GET /api/v1/resumes/:id  (owner or recruiter)
 router.get('/:id', async (req, res, next) => {
     try {

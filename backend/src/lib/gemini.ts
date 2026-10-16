@@ -1,117 +1,120 @@
+import { GoogleGenAI } from '@google/genai';
+import { z } from 'zod';
 import config from '../config';
+import { ApiError } from '../utils/apiError';
 
 // ---------------------------------------------------------------------------
-// Constants
+// Single entry point for every structured Gemini call in the assessment feature.
+//
+// Latency / cost controls:
+//   - Structured output (responseMimeType + responseJsonSchema): no fenced or
+//     malformed JSON, so no "retry because the JSON was garbage" loops.
+//   - Thinking is disabled on 2.5-flash models: it adds many seconds for tasks
+//     (question writing, rubric grading) that do not need it.
+//   - A hard per-request timeout, so a stalled request can never hang the API.
+//   - The SDK's own retry (default: 5 attempts, up to 60s back-off) is switched
+//     off; this module is the only retry layer and it is bounded.
 // ---------------------------------------------------------------------------
 
-const GEMINI_BASE_URL =
-    'https://generativelanguage.googleapis.com/v1beta/models';
+const DEFAULT_TIMEOUT_MS = 40_000;
+const DEFAULT_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 800;
+// A healthy flash model answers in a few seconds; past this the primary is treated as down.
+const PRIMARY_TIMEOUT_MS = 15_000;
+const PRIMARY_COOLDOWN_MS = 2 * 60_000;
 
-/** HTTP status codes that are safe to retry. */
-const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+let primaryDownUntil = 0;
 
-// ---------------------------------------------------------------------------
-// Model accessor (lazy-read so env var is resolved at call-time)
-// ---------------------------------------------------------------------------
+let client: GoogleGenAI | undefined;
 
-export function getGeminiModel(): string {
-    return config.geminiModel;
+function getClient(): GoogleGenAI {
+    client ??= new GoogleGenAI({ apiKey: config.geminiApiKey() });
+    return client;
 }
 
-// ---------------------------------------------------------------------------
-// Core fetch wrapper with exponential-backoff retry
-// ---------------------------------------------------------------------------
+function statusOf(err: unknown): number | undefined {
+    const status = (err as { status?: number })?.status;
+    return typeof status === 'number' ? status : undefined;
+}
 
-/**
- * Calls the Gemini REST API directly (no SDK dependency).
- * Retries on transient failures using exponential back-off.
- *
- * @param prompt   The text prompt to send.
- * @param maxTries Total attempts including the first one (default 4).
- * @param baseMs   Initial delay in ms before first retry (default 1000).
- */
-export async function callGemini(
-    prompt: string,
-    maxTries = 4,
-    baseMs = 1000,
-): Promise<string> {
-    const apiKey = config.geminiApiKey();
-    const model = getGeminiModel();
-    const url = `${GEMINI_BASE_URL}/${model}:generateContent`;
+/** Network errors, timeouts, rate limits and 5xx are worth one more try; other 4xx are not. */
+function isTransient(err: unknown): boolean {
+    const status = statusOf(err);
+    return status === undefined || status === 408 || status === 429 || status >= 500;
+}
+
+export interface GenerateJSONOptions<T> {
+    prompt: string;
+    schema: z.ZodType<T>;
+    /** Stable instructions kept apart from the (untrusted) data in `prompt`. */
+    systemInstruction?: string;
+    timeoutMs?: number;
+    /** Total attempts including the first one. */
+    attempts?: number;
+    temperature?: number;
+}
+
+export async function generateJSON<T>(opts: GenerateJSONOptions<T>): Promise<T> {
+    const {
+        prompt,
+        schema,
+        systemInstruction,
+        timeoutMs = DEFAULT_TIMEOUT_MS,
+        attempts = DEFAULT_ATTEMPTS,
+        temperature = 0.4,
+    } = opts;
+
+    const ai = getClient();
+    const responseJsonSchema = z.toJSONSchema(schema);
+
+    const primary = config.geminiModel;
+    const fallback = config.geminiFallbackModel;
 
     let lastError: unknown;
-
-    for (let attempt = 0; attempt < maxTries; attempt++) {
+    let previousModel: string | undefined;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        // An overloaded/hung primary is not worth retrying: go to the fallback, and keep
+        // using it for a while so later requests do not each pay the primary's timeout.
+        const model = attempt === 1 && Date.now() >= primaryDownUntil ? primary : fallback;
+        const isPrimary = model === primary && primary !== fallback;
+        const disableThinking = /2\.5-flash/.test(model);
+        const started = Date.now();
+        if (previousModel === model) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        previousModel = model;
         try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': apiKey,
+            const res = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    systemInstruction,
+                    responseMimeType: 'application/json',
+                    responseJsonSchema,
+                    temperature,
+                    ...(disableThinking ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+                    httpOptions: {
+                        timeout: isPrimary ? Math.min(timeoutMs, PRIMARY_TIMEOUT_MS) : timeoutMs,
+                        retryOptions: { attempts: 1 },
+                    },
                 },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: [{ text: prompt }],
-                        },
-                    ],
-                }),
             });
-
-            const data = (await response.json()) as {
-                candidates?: Array<{
-                    content?: { parts?: Array<{ text?: string }> };
-                }>;
-                error?: { message?: string; code?: number };
-            };
-
-            if (response.ok) {
-                const text =
-                    data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-                return text;
-            }
-
-            // Non-retryable client errors — throw immediately
-            if (!RETRYABLE_STATUS_CODES.has(response.status)) {
-                const msg =
-                    data.error?.message ??
-                    `Gemini API error: HTTP ${response.status}`;
-                throw new Error(msg);
-            }
-
-            // Retryable — save error and fall through to delay
-            lastError = new Error(
-                data.error?.message ?? `Gemini transient error: HTTP ${response.status}`,
-            );
+            const parsed = schema.parse(JSON.parse(res.text ?? ''));
+            console.info(`[gemini] ${model} ok in ${Date.now() - started}ms (attempt ${attempt})`);
+            return parsed;
         } catch (err) {
-            // Network-level errors are always retryable
-            if (err instanceof TypeError) {
-                lastError = err;
-            } else {
-                // Non-retryable errors re-thrown immediately
-                throw err;
-            }
-        }
-
-        if (attempt < maxTries - 1) {
-            const delayMs = baseMs * 2 ** attempt;
-            await new Promise((r) => setTimeout(r, delayMs));
+            lastError = err;
+            console.warn(`[gemini] ${model} failed after ${Date.now() - started}ms:`, (err as Error)?.name, statusOf(err) ?? '');
+            if (isPrimary && isTransient(err)) primaryDownUntil = Date.now() + PRIMARY_COOLDOWN_MS;
+            const retryable = err instanceof SyntaxError || err instanceof z.ZodError || isTransient(err);
+            if (!retryable) break;
         }
     }
 
-    throw lastError ?? new Error('Gemini API call failed after all retries.');
-}
-
-// ---------------------------------------------------------------------------
-// JSON extraction helper
-// ---------------------------------------------------------------------------
-
-/**
- * Parses a JSON block from a Gemini response.
- * Gemini sometimes wraps JSON in ```json … ``` fences — this strips them.
- */
-export function extractJSON<T>(raw: string): T {
-    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-    const jsonStr = fenced ? fenced[1] : raw;
-    return JSON.parse(jsonStr.trim()) as T;
+    // Logs above include only error type/status; prompts contain resume and answer text.
+    if (lastError instanceof SyntaxError || lastError instanceof z.ZodError) {
+        throw new ApiError('The AI returned an unusable response; please try again', 502, true, 'INVALID_LLM_OUTPUT');
+    }
+    if (statusOf(lastError) === 429) {
+        throw new ApiError('The AI service is busy; please try again in a minute', 503, true, 'LLM_RATE_LIMITED');
+    }
+    throw new ApiError('The AI service is unavailable; please try again', 503, true, 'LLM_UNAVAILABLE');
 }

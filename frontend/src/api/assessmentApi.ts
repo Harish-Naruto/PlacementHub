@@ -1,6 +1,8 @@
 // Central API client for the PlacementHub Assessment feature.
 // All requests go through this module so the base URL is configured in one place.
 
+import { refreshApi } from './auth';
+
 const API_BASE = 'http://localhost:4000/api/v1';
 
 
@@ -14,11 +16,32 @@ export class ApiError extends Error {
     }
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+// Assessment routes require a logged-in user. useAssessment keeps this in sync with AuthContext.
+let accessToken: string | null = null;
+export function setAssessmentToken(token: string | null) {
+    accessToken = token;
+}
+
+async function request<T>(path: string, options?: RequestInit, retried = false): Promise<T> {
     const res = await fetch(`${API_BASE}${path}`, {
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // refresh-token cookie, used for the 401 retry below
+        headers: {
+            // For FormData the browser must set the multipart boundary itself.
+            ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         ...options,
     });
+
+    // Access tokens last 15 minutes but an assessment can run longer: refresh once and retry.
+    if (res.status === 401 && !retried) {
+        try {
+            accessToken = (await refreshApi()).data.accessToken;
+            return request<T>(path, options, true);
+        } catch {
+            /* fall through to the original 401 */
+        }
+    }
 
     const data = await res.json();
 
@@ -33,30 +56,29 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 // Types (mirrors backend public types)
 // ---------------------------------------------------------------------------
 
-export interface MockResumeSummary {
-    id: string;
-    name: string;
-    education: {
-        degree: string;
-        institution: string;
-        graduationYear: number;
-        cgpa?: number;
-    };
-    skills: string[];
+// Subset of the resume parser's output (backend/src/resume/schema.ts) that the UI shows.
+export interface ParsedResume {
+    skills: { name: string; canonical_name: string | null; category: string | null; claim_type: string }[];
     projects: {
-        title: string;
-        description: string;
+        name: string;
+        description: string | null;
         technologies: string[];
+        features: { claim: string }[];
     }[];
     experience: {
-        company: string;
-        role: string;
-        duration: string;
-        description: string;
+        organization: string | null;
+        title: string | null;
+        start_date: string | null;
+        end_date: string | null;
+        is_current: boolean | null;
+        responsibilities: string[];
     }[];
-    githubUsername?: string;
-    linkedinUrl?: string;
-    _isDummyTestData: true;
+}
+
+export interface StoredResume {
+    id: string;
+    createdAt: string;
+    resume: ParsedResume;
 }
 
 export interface PublicQuestion {
@@ -137,12 +159,20 @@ export interface AssessmentResult {
 // API functions
 // ---------------------------------------------------------------------------
 
-export async function fetchResumes(): Promise<{ data: MockResumeSummary[] }> {
-    return request<{ data: MockResumeSummary[] }>('/mock/resumes');
+/** The signed-in user's previously parsed resumes, newest first. */
+export async function fetchResumes(): Promise<{ data: StoredResume[] }> {
+    return request<{ data: StoredResume[] }>('/resumes');
 }
 
-export async function fetchResume(id: string): Promise<{ data: MockResumeSummary }> {
-    return request<{ data: MockResumeSummary }>(`/mock/resumes/${id}`);
+/** Uploads a PDF/DOCX; the backend parses it with Gemini and stores the result. */
+export async function uploadResume(file: File): Promise<StoredResume> {
+    const form = new FormData();
+    form.append('resume', file);
+    const res = await request<{ data: { id: string; resume: ParsedResume } }>('/resumes', {
+        method: 'POST',
+        body: form,
+    });
+    return { id: res.data.id, resume: res.data.resume, createdAt: new Date().toISOString() };
 }
 
 export async function generateAssessment(payload: {

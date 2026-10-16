@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchResumes, generateAssessment, submitAssessment, ApiError } from '../api/assessmentApi';
-import type { MockResumeSummary, PublicQuestion, AssessmentResult } from '../api/assessmentApi';
+import { fetchResumes, uploadResume, generateAssessment, submitAssessment, setAssessmentToken, ApiError } from '../api/assessmentApi';
+import { useAuth } from '../context/AuthContext';
+import type { StoredResume, PublicQuestion, AssessmentResult } from '../api/assessmentApi';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,8 +25,8 @@ export interface AssessmentConfig {
 
 interface AssessmentState {
     phase: AssessmentPhase;
-    resumes: MockResumeSummary[];
-    selectedResume: MockResumeSummary | null;
+    resumes: StoredResume[];
+    selectedResume: StoredResume | null;
     config: AssessmentConfig;
     assessmentId: string | null;
     questions: PublicQuestion[];
@@ -35,10 +36,12 @@ interface AssessmentState {
     result: AssessmentResult | null;
     error: string | null;
     loadingResumes: boolean;
+    uploading: boolean;
+    resumeError: string | null;
 }
 
 const DEFAULT_CONFIG: AssessmentConfig = {
-    questionCount: 12,
+    questionCount: 6,
     difficulty: 'mixed',
     durationMinutes: 20,
 };
@@ -48,6 +51,9 @@ const DEFAULT_CONFIG: AssessmentConfig = {
 // ---------------------------------------------------------------------------
 
 export function useAssessment() {
+    const { accessToken } = useAuth();
+    setAssessmentToken(accessToken);
+
     const [state, setState] = useState<AssessmentState>({
         phase: 'resume_select',
         resumes: [],
@@ -61,23 +67,26 @@ export function useAssessment() {
         result: null,
         error: null,
         loadingResumes: true,
+        uploading: false,
+        resumeError: null,
     });
 
-    // Load resumes on mount
+    // Load the user's parsed resumes once we have a token to authenticate with.
     useEffect(() => {
+        if (!accessToken) return;
         fetchResumes()
             .then(({ data }) =>
                 setState((s) => ({ ...s, resumes: data, loadingResumes: false })),
             )
             .catch((err) =>
+                // Not fatal: the user can still upload a resume.
                 setState((s) => ({
                     ...s,
                     loadingResumes: false,
-                    error: err instanceof ApiError ? err.message : 'Failed to load resumes',
-                    phase: 'error',
+                    resumeError: err instanceof ApiError ? err.message : 'Failed to load your resumes',
                 })),
             );
-    }, []);
+    }, [accessToken]);
 
     // Countdown timer (only during 'attempting' phase)
     useEffect(() => {
@@ -99,8 +108,28 @@ export function useAssessment() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.phase, state.timeLeftSeconds]);
 
-    const selectResume = useCallback((resume: MockResumeSummary) => {
+    const selectResume = useCallback((resume: StoredResume) => {
         setState((s) => ({ ...s, selectedResume: resume, phase: 'resume_preview' }));
+    }, []);
+
+    const upload = useCallback(async (file: File) => {
+        setState((s) => ({ ...s, uploading: true, resumeError: null }));
+        try {
+            const stored = await uploadResume(file);
+            setState((s) => ({
+                ...s,
+                uploading: false,
+                resumes: [stored, ...s.resumes],
+                selectedResume: stored,
+                phase: 'resume_preview',
+            }));
+        } catch (err) {
+            setState((s) => ({
+                ...s,
+                uploading: false,
+                resumeError: err instanceof ApiError ? err.message : 'Failed to upload resume',
+            }));
+        }
     }, []);
 
     const goToConfig = useCallback(() => {
@@ -194,6 +223,7 @@ export function useAssessment() {
     return {
         state,
         selectResume,
+        upload,
         goToConfig,
         updateConfig,
         startGeneration,

@@ -1,11 +1,16 @@
-import { z } from 'zod/v4';
+import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
 // Assessment configuration
 // ---------------------------------------------------------------------------
 
+// Each question costs generation tokens and (for free-text answers) grading work,
+// so the count is kept small; 6 is enough to spot-check a resume's main claims.
+export const DEFAULT_QUESTIONS = 6;
+export const MAX_QUESTIONS = 10;
+
 export const AssessmentConfigSchema = z.object({
-    questionCount: z.number().int().min(1).max(30).default(12),
+    questionCount: z.number().int().min(3).max(MAX_QUESTIONS).default(DEFAULT_QUESTIONS),
     difficulty: z.enum(['easy', 'medium', 'hard', 'mixed']).default('mixed'),
     durationMinutes: z.number().int().min(5).max(120).default(20),
 });
@@ -33,13 +38,6 @@ export const MCQOptionSchema = z.object({
     text: z.string(),
 });
 
-// Grading criterion stored privately
-export const GradingCriterionSchema = z.object({
-    criterion: z.string(),
-    maxMarks: z.number(),
-    description: z.string(),
-});
-
 // Full private question (backend only)
 export const PrivateQuestionSchema = z.object({
     id: z.string(),
@@ -52,10 +50,8 @@ export const PrivateQuestionSchema = z.object({
     // MCQ only
     options: z.array(MCQOptionSchema).optional(),
     correctOptionId: z.string().optional(),
-    // All types
+    // All types: key points a good answer covers (private grading key)
     expectedAnswer: z.string(),
-    gradingRubric: z.string(),
-    gradingCriteria: z.array(GradingCriterionSchema),
     // Coding only
     expectedLanguage: z.string().optional(),
     expectedBehavior: z.string().optional(),
@@ -106,6 +102,7 @@ export type SubmissionStatus = 'pending' | 'submitted' | 'evaluated' | 'error';
 
 export interface AssessmentSession {
     assessmentId: string;
+    userId: string;
     resumeId: string;
     config: AssessmentConfig;
     privateAssessment: GeneratedAssessment;
@@ -121,14 +118,16 @@ export interface AssessmentSession {
 // Submission types
 // ---------------------------------------------------------------------------
 
+export const MAX_ANSWER_CHARS = 5000;
+
 export const StudentAnswerSchema = z.object({
-    questionId: z.string(),
-    answer: z.string(), // For MCQ: option id; for others: free text or code
+    questionId: z.string().max(64),
+    answer: z.string().max(MAX_ANSWER_CHARS), // For MCQ: option id; for others: free text or code
 });
 export type StudentAnswer = z.infer<typeof StudentAnswerSchema>;
 
 export const SubmitAssessmentBodySchema = z.object({
-    answers: z.array(StudentAnswerSchema),
+    answers: z.array(StudentAnswerSchema).max(MAX_QUESTIONS),
 });
 
 // ---------------------------------------------------------------------------

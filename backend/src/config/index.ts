@@ -63,6 +63,8 @@ const config = {
   // Resume parsing (Gemini)
   geminiApiKey: () => required("GEMINI_API_KEY"),
   geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+  // Used when the primary model is overloaded (503/429) instead of retrying it.
+  geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL || "gemini-2.5-flash",
   resumeMaxBytes: 5 * 1024 * 1024,
 
   // Database

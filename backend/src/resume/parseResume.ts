@@ -24,7 +24,7 @@ export type Generate = (resumeText: string) => Promise<string>;
 
 // Default LLM call: one structured-output request to Gemini.
 export const geminiGenerate: Generate = async (resumeText) => {
-    const ai = new GoogleGenAI({ apiKey: config.geminiApiKey(), httpOptions: { timeout: 60_000 } });
+    const ai = new GoogleGenAI({ apiKey: config.geminiApiKey(), httpOptions: { timeout: 60_000, retryOptions: { attempts: 1 } } });
     const res = await ai.models.generateContent({
         model: config.geminiModel,
         contents: `<resume>\n${resumeText}\n</resume>`,
