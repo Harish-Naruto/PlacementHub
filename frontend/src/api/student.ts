@@ -143,11 +143,11 @@ export async function updateStudentProfile(
 export async function uploadResumeApi(
   token: string,
   file: File,
-): Promise<{ success: boolean; message: string; fileName?: string }> {
+): Promise<{ success: boolean; message: string; fileName?: string; data?: any; resume?: any }> {
   const formData = new FormData();
   formData.append("resume", file);
 
-  const res = await request<{ error: boolean; success: boolean; message: string; fileName?: string }>(
+  const res = await request<{ error: boolean; success: boolean; message: string; fileName?: string; data?: any; resume?: any }>(
     "/students/me/resume",
     token,
     {
@@ -206,9 +206,9 @@ export async function deleteStudentProject(token: string, projectId: string): Pr
   await request(`/students/me/projects/${projectId}`, token, { method: "DELETE" });
 }
 
-export async function fetchJobs(token: string): Promise<JobData[]> {
-  const res = await request<{ error: boolean; data: JobData[] }>("/jobs", token);
-  return res.data || [];
+export async function fetchJobs(token?: string): Promise<JobData[]> {
+  const res = await request<{ error: boolean; data?: JobData[]; jobs?: JobData[] }>("/jobs", token);
+  return res.data || res.jobs || [];
 }
 
 export async function applyToJob(token: string, jobId: string): Promise<ApplicationData> {

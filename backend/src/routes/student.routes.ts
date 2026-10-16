@@ -48,25 +48,54 @@ router.put("/me/profile", async (req: Request, res: Response, next: NextFunction
 });
 
 // ---------------------------------------------------------------------------
-// Resume Upload (Accepts file and returns success directly)
+// Resume Upload & Management (LLM extraction via memory buffer, no raw file DB storage)
 // ---------------------------------------------------------------------------
-router.post(
-  "/me/resume",
-  uploadResumeMiddleware.single("resume"),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await resumeService.saveResume(req.user!.id, req.file);
-      res.status(200).json({ error: false, ...result });
-    } catch (err) {
-      next(err);
-    }
-  },
-);
+export { getParsedResume } from "../services/resume.service.ts";
+
+const handleResumeUpload = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await resumeService.saveResume(req.user!.id, req.file);
+    console.log("control reach here!!")
+    res.status(201).json({
+      error: false,
+      success: true,
+      message: "Resume uploaded and parsed successfully",
+      data: result,
+      ...result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+router.post("/me/resume", uploadResumeMiddleware.single("resume"), handleResumeUpload);
+
 
 router.get("/me/resumes", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const resumes = await resumeService.listResumes(req.user!.id);
     res.status(200).json({ error: false, data: resumes });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const handleGetResumeById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const resume = await resumeService.getResumeById(req.user!.id, req.params.id, req.user!.role);
+    res.status(200).json({ error: false, data: resume });
+  } catch (err) {
+    next(err);
+  }
+};
+
+router.get("/me/resumes/:id", handleGetResumeById);
+router.get("/resumes/:id", handleGetResumeById);
+
+router.delete("/me/resumes/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await resumeService.deleteResume(req.user!.id, req.params.id);
+    res.status(200).json({ error: false, ...result });
   } catch (err) {
     next(err);
   }

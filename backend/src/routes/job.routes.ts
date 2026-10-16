@@ -8,10 +8,19 @@ import { jobListQuerySchema, applyJobSchema } from "../validators/student.valida
 
 const router = Router();
 
+// Optional authentication helper: authenticates if Bearer token is provided,
+// but allows public unauthenticated browsing of the job board.
+const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    return authenticate(req, res, next);
+  }
+  next();
+};
+
 // ---------------------------------------------------------------------------
 // Browse published jobs (authenticated or public)
 // ---------------------------------------------------------------------------
-router.get("/", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+router.get("/", optionalAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const parsed = jobListQuerySchema.safeParse(req.query);
     if (!parsed.success) {
@@ -19,7 +28,15 @@ router.get("/", authenticate, async (req: Request, res: Response, next: NextFunc
       throw new ApiError(message, 400);
     }
     const result = await jobService.listJobs(parsed.data);
-    res.status(200).json({ error: false, ...result });
+    res.status(200).json({
+      error: false,
+      data: result.jobs,
+      jobs: result.jobs,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    });
   } catch (err) {
     next(err);
   }
@@ -28,9 +45,9 @@ router.get("/", authenticate, async (req: Request, res: Response, next: NextFunc
 // ---------------------------------------------------------------------------
 // View job details and eligibility
 // ---------------------------------------------------------------------------
-router.get("/:jobId", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+router.get("/:jobId", optionalAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await jobService.getJobDetails(req.params.jobId, req.user!.id);
+    const result = await jobService.getJobDetails(req.params.jobId, req.user?.id);
     res.status(200).json({ error: false, data: result });
   } catch (err) {
     next(err);

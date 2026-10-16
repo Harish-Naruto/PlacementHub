@@ -11,7 +11,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type = "skill"
       case "EVALUATED":
       case "VERIFIED":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
             Verified
           </span>
@@ -19,16 +19,18 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type = "skill"
       case "REPOSITORY_OBSERVED":
       case "OBSERVED":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-300 shadow-2xs">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-            Observed
+            Observed in Code
           </span>
         );
+      case "SELF_DECLARED":
+      case "UNVERIFIED":
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            Unverified
+            Unverified (User Mentioned)
           </span>
         );
     }

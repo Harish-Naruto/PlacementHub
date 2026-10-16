@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { uploadResumeApi } from "../../api/student";
 
@@ -7,6 +8,7 @@ export const ResumePage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
+  const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -17,8 +19,14 @@ export const ResumePage: React.FC = () => {
     setMessage(null);
     try {
       const res = await uploadResumeApi(accessToken, file);
-      setMessage({ type: "success", text: res.message || "Resume uploaded successfully!" });
+      setMessage({ type: "success", text: res.message || "Resume uploaded and parsed successfully!" });
       setUploadedName(file.name);
+
+      const parsedSkills = res.data?.resume?.skills || res.resume?.skills || [];
+      if (Array.isArray(parsedSkills) && parsedSkills.length > 0) {
+        setExtractedSkills(parsedSkills.map((s: any) => s.canonical_name || s.name || "").filter(Boolean));
+      }
+
       setFile(null);
     } catch (err: any) {
       setMessage({ type: "error", text: err.message || "Upload failed." });
@@ -54,12 +62,38 @@ export const ResumePage: React.FC = () => {
             </div>
             <div>
               <h4 className="text-sm font-bold text-slate-900">{uploadedName}</h4>
-              <p className="text-xs text-slate-500">Active resume on file</p>
+              <p className="text-xs text-slate-500">Active resume on file • Parsed by AI</p>
             </div>
           </div>
           <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">
             Active
           </span>
+        </div>
+      )}
+
+      {extractedSkills.length > 0 && (
+        <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+              <span>⚡</span> Skills Extracted from Resume (Mentioned by User • Unverified)
+            </h4>
+            <Link to="/dashboard/skills" className="text-xs font-bold text-amber-800 hover:underline">
+              View in Skills Tab →
+            </Link>
+          </div>
+          <p className="text-xs text-amber-700/90">
+            These skills have been automatically added to your profile as self-declared skills:
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {extractedSkills.map((name, i) => (
+              <span
+                key={i}
+                className="px-3 py-1 rounded-full bg-white border border-amber-300 text-xs font-bold text-amber-900 shadow-2xs"
+              >
+                {name}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 

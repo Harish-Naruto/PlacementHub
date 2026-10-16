@@ -197,58 +197,56 @@ export async function login(input: LoginInput) {
 export async function refresh(rawRefreshToken: string) {
   const tokenHashValue = hashToken(rawRefreshToken);
 
-  // Look up session with user in a transaction
-  const result = await prisma.$transaction(async (tx) => {
-    const session = await tx.authSession.findUnique({
-      where: { tokenHash: tokenHashValue },
-      include: { user: true },
-    });
-
-    if (!session) {
-      throw new ApiError("Invalid refresh token", 401);
-    }
-
-    // Revoked — possible token reuse attack; revoke entire family
-    if (session.revokedAt) {
-      await tx.authSession.updateMany({
-        where: { tokenFamily: session.tokenFamily, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
-      throw new ApiError("Refresh token reuse detected — all sessions in this family revoked", 401);
-    }
-
-    if (session.expiresAt < new Date()) {
-      throw new ApiError("Refresh token expired", 401);
-    }
-
-    // Revoke old token
-    await tx.authSession.update({
-      where: { id: session.id },
-      data: { revokedAt: new Date(), lastUsedAt: new Date() },
-    });
-
-    // Create new rotated token in the same family
-    const newRawToken = generateRefreshToken();
-    const newTokenHash = hashToken(newRawToken);
-    const newExpiresAt = new Date(
-      Date.now() + config.refreshTokenTtlDays * 24 * 60 * 60 * 1000,
-    );
-
-    await tx.authSession.create({
-      data: {
-        userId: session.userId,
-        tokenHash: newTokenHash,
-        tokenFamily: session.tokenFamily,
-        expiresAt: newExpiresAt,
-      },
-    });
-
-    return {
-      user: session.user,
-      rawToken: newRawToken,
-      expiresAt: newExpiresAt,
-    };
+  // Look up session with user
+  const session = await prisma.authSession.findUnique({
+    where: { tokenHash: tokenHashValue },
+    include: { user: true },
   });
+
+  if (!session) {
+    throw new ApiError("Invalid refresh token", 401);
+  }
+
+  // Revoked — possible token reuse attack; revoke entire family
+  if (session.revokedAt) {
+    await prisma.authSession.updateMany({
+      where: { tokenFamily: session.tokenFamily, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    throw new ApiError("Refresh token reuse detected — all sessions in this family revoked", 401);
+  }
+
+  if (session.expiresAt < new Date()) {
+    throw new ApiError("Refresh token expired", 401);
+  }
+
+  // Revoke old token
+  await prisma.authSession.update({
+    where: { id: session.id },
+    data: { revokedAt: new Date(), lastUsedAt: new Date() },
+  });
+
+  // Create new rotated token in the same family
+  const newRawToken = generateRefreshToken();
+  const newTokenHash = hashToken(newRawToken);
+  const newExpiresAt = new Date(
+    Date.now() + config.refreshTokenTtlDays * 24 * 60 * 60 * 1000,
+  );
+
+  await prisma.authSession.create({
+    data: {
+      userId: session.userId,
+      tokenHash: newTokenHash,
+      tokenFamily: session.tokenFamily,
+      expiresAt: newExpiresAt,
+    },
+  });
+
+  const result = {
+    user: session.user,
+    rawToken: newRawToken,
+    expiresAt: newExpiresAt,
+  };
 
   const accessToken = await signAccessToken(result.user.id, result.user.role);
 
