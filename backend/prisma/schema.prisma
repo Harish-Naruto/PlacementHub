@@ -11,3 +11,406 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum UserRole {
+  STUDENT
+  RECRUITER
+}
+
+enum ProficiencyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum SkillVerificationStatus {
+  SELF_DECLARED
+  REPOSITORY_OBSERVED
+  EVALUATED
+  NEEDS_REVIEW
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  EVALUATED
+  NEEDS_CHANGES
+}
+
+enum EvidenceSourceType {
+  PROJECT
+  GITHUB_REPOSITORY
+  ASSESSMENT
+  CERTIFICATE
+  OTHER
+}
+
+enum EvidenceStatus {
+  PENDING
+  OBSERVED
+  EVALUATED
+  REJECTED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  INTERNSHIP
+  CONTRACT
+  PART_TIME
+}
+
+enum WorkMode {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  CLOSED
+}
+
+enum JobRequirementType {
+  REQUIRED
+  PREFERRED
+}
+
+enum JobSourceType {
+  RECRUITER_POSTED
+  PARTNER_POSTING
+  ALUMNI_REFERRAL
+  JOB_API
+  OTHER
+}
+
+enum ApplicationStatus {
+  APPLIED
+  IN_REVIEW
+  SHORTLISTED
+  INTERVIEW_SCHEDULED
+  INTERVIEWING
+  OFFERED
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+// -----------------------------------------------------------------------------
+// User identity and profiles
+// -----------------------------------------------------------------------------
+
+model User {
+  // Use the UUID from Supabase Auth. Create this profile from a trusted backend
+  // flow or database trigger after authentication succeeds.
+  id            String   @id @db.Uuid
+  email         String?  @unique @db.VarChar(320)
+  name          String?  @db.VarChar(160)
+  role          UserRole @default(STUDENT)
+  profileImage  String?  @db.VarChar(2048)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(6)
+
+  studentProfile   StudentProfile?
+  recruiterProfile RecruiterProfile?
+  companiesCreated Company[]         @relation("CompanyCreator")
+  applicationEvents ApplicationEvent[] @relation("ApplicationEventActor")
+
+  @@index([role])
+}
+
+// Institution is an entity, not a login role in this first version.
+// Each student belongs to an institution; job listings can initially be shared
+// across institutions. Add institution-specific job targeting if needed later.
+model Institution {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(200)
+  slug      String   @unique @db.VarChar(220)
+  website   String?  @db.VarChar(2048)
+  city      String?  @db.VarChar(120)
+  state     String?  @db.VarChar(120)
+  country   String   @default("India") @db.VarChar(100)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  students StudentProfile[]
+
+  @@index([name])
+  @@index([city, state])
+}
+
+model StudentProfile {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @unique @db.Uuid
+  institutionId    String   @db.Uuid
+  branch           String?  @db.VarChar(120)
+  degree           String?  @db.VarChar(120)
+  graduationYear   Int?
+  cgpa             Decimal? @db.Decimal(4, 2)
+  githubUsername   String?  @db.VarChar(39)
+  linkedinUrl      String?  @db.VarChar(2048)
+  bio              String?  @db.VarChar(1000)
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  skills      StudentSkill[]
+  projects    Project[]
+  applications Application[]
+
+  @@index([institutionId, graduationYear])
+  @@index([institutionId, branch])
+}
+
+model RecruiterProfile {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  companyId String   @db.Uuid
+  jobTitle  String?  @db.VarChar(120)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  jobs JobPosting[]
+
+  @@index([companyId])
+}
+
+// -----------------------------------------------------------------------------
+// Companies and job openings
+// -----------------------------------------------------------------------------
+
+model Company {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(200)
+  slug        String   @unique @db.VarChar(220)
+  website     String?  @db.VarChar(2048)
+  description String?  @db.Text
+  city        String?  @db.VarChar(120)
+  country     String?  @db.VarChar(100)
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  createdBy User              @relation("CompanyCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  recruiters RecruiterProfile[]
+
+  @@index([name])
+}
+
+model JobPosting {
+  id                 String         @id @default(uuid()) @db.Uuid
+  recruiterProfileId String         @db.Uuid
+  title              String         @db.VarChar(200)
+  description        String         @db.Text
+  location           String?        @db.VarChar(200)
+  workMode           WorkMode       @default(ONSITE)
+  employmentType     EmploymentType @default(FULL_TIME)
+  minimumCgpa        Decimal?       @db.Decimal(4, 2)
+  applicationDeadline DateTime?      @db.Timestamptz(6)
+  externalUrl        String?        @db.VarChar(2048)
+  status             JobStatus      @default(DRAFT)
+  createdAt          DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime       @updatedAt @db.Timestamptz(6)
+
+  recruiterProfile RecruiterProfile      @relation(fields: [recruiterProfileId], references: [id], onDelete: Restrict)
+  eligibleBranches JobEligibleBranch[]
+  graduationYears  JobEligibleGraduationYear[]
+  skillRequirements JobSkillRequirement[]
+  applications     Application[]
+  sources          JobSource[]
+
+  @@index([status, applicationDeadline])
+  @@index([recruiterProfileId, status])
+  @@index([createdAt])
+}
+
+// Separate rows avoid storing a list of branches/years in a denormalized array.
+model JobEligibleBranch {
+  jobPostingId String @db.Uuid
+  branch       String @db.VarChar(120)
+
+  jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+
+  @@id([jobPostingId, branch])
+  @@index([branch])
+}
+
+model JobEligibleGraduationYear {
+  jobPostingId  String @db.Uuid
+  graduationYear Int
+
+  jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+
+  @@id([jobPostingId, graduationYear])
+  @@index([graduationYear])
+}
+
+model JobSkillRequirement {
+  jobPostingId    String             @db.Uuid
+  skillId         String             @db.Uuid
+  requirementType JobRequirementType
+  weight          Decimal            @default(1.0) @db.Decimal(5, 2)
+
+  jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  skill      Skill      @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@id([jobPostingId, skillId])
+  @@index([skillId, requirementType])
+}
+
+// Multiple sources may refer to the same canonical job posting. Store source
+// records separately so deduplication can be added without duplicating jobs.
+model JobSource {
+  id             String        @id @default(uuid()) @db.Uuid
+  jobPostingId   String        @db.Uuid
+  sourceType     JobSourceType
+  sourceUrl      String?       @db.VarChar(2048)
+  externalId     String?       @db.VarChar(255)
+  fingerprint    String?       @unique @db.VarChar(255)
+  importedAt     DateTime      @default(now()) @db.Timestamptz(6)
+
+  jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+
+  @@index([jobPostingId])
+  @@index([sourceType, externalId])
+}
+
+// -----------------------------------------------------------------------------
+// Canonical skills, projects, and evidence
+// -----------------------------------------------------------------------------
+
+model Skill {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(120)
+  category    String?  @db.VarChar(100)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  aliases           SkillAlias[]
+  studentSkills     StudentSkill[]
+  projectSkills     ProjectSkill[]
+  jobRequirements   JobSkillRequirement[]
+
+  @@index([category])
+}
+
+model SkillAlias {
+  id      String @id @default(uuid()) @db.Uuid
+  alias   String @unique @db.VarChar(120)
+  skillId String @db.Uuid
+
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([skillId])
+}
+
+model StudentSkill {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  studentProfileId    String                 @db.Uuid
+  skillId             String                 @db.Uuid
+  declaredLevel       ProficiencyLevel?
+  verificationStatus SkillVerificationStatus @default(SELF_DECLARED)
+  createdAt           DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime               @updatedAt @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  skill          Skill          @relation(fields: [skillId], references: [id], onDelete: Restrict)
+  evidence       SkillEvidence[]
+
+  @@unique([studentProfileId, skillId])
+  @@index([skillId, verificationStatus])
+}
+
+model Project {
+  id                 String        @id @default(uuid()) @db.Uuid
+  studentProfileId   String        @db.Uuid
+  title              String        @db.VarChar(200)
+  description        String        @db.Text
+  personalContribution String?      @db.Text
+  repositoryUrl      String?       @db.VarChar(2048)
+  demoUrl            String?       @db.VarChar(2048)
+  status             ProjectStatus @default(DRAFT)
+  submittedAt        DateTime?     @db.Timestamptz(6)
+  createdAt          DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime      @updatedAt @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  skills         ProjectSkill[]
+  evidence       SkillEvidence[]
+
+  @@index([studentProfileId, status])
+  @@index([createdAt])
+}
+
+model ProjectSkill {
+  projectId String @db.Uuid
+  skillId   String @db.Uuid
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@id([projectId, skillId])
+  @@index([skillId])
+}
+
+model SkillEvidence {
+  id             String            @id @default(uuid()) @db.Uuid
+  studentSkillId String            @db.Uuid
+  projectId      String?           @db.Uuid
+  sourceType     EvidenceSourceType
+  sourceUrl      String?           @db.VarChar(2048)
+  description    String?           @db.Text
+  status         EvidenceStatus    @default(PENDING)
+  createdAt      DateTime          @default(now()) @db.Timestamptz(6)
+  reviewedAt     DateTime?         @db.Timestamptz(6)
+
+  studentSkill StudentSkill @relation(fields: [studentSkillId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([studentSkillId, status])
+  @@index([projectId])
+}
+
+// -----------------------------------------------------------------------------
+// Applications and their status history
+// -----------------------------------------------------------------------------
+
+model Application {
+  id               String            @id @default(uuid()) @db.Uuid
+  studentProfileId String            @db.Uuid
+  jobPostingId     String            @db.Uuid
+  status           ApplicationStatus @default(APPLIED)
+  resumeUrl        String?           @db.VarChar(2048)
+  appliedAt        DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  jobPosting     JobPosting     @relation(fields: [jobPostingId], references: [id], onDelete: Restrict)
+  events         ApplicationEvent[]
+
+  @@unique([studentProfileId, jobPostingId])
+  @@index([studentProfileId, status])
+  @@index([jobPostingId, status])
+  @@index([appliedAt])
+}
+
+model ApplicationEvent {
+  id            String            @id @default(uuid()) @db.Uuid
+  applicationId String            @db.Uuid
+  actorUserId   String            @db.Uuid
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus
+  note          String?           @db.VarChar(1000)
+  createdAt     DateTime          @default(now()) @db.Timestamptz(6)
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actor       User        @relation("ApplicationEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, createdAt])
+  @@index([actorUserId, createdAt])
+}
