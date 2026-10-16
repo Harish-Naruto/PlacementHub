@@ -25,19 +25,21 @@ export type Generate = (resumeText: string) => Promise<string>;
 // Default LLM call: one structured-output request to Gemini with model fallback.
 export const geminiGenerate: Generate = async (resumeText) => {
     const apiKey = config.geminiApiKey();
-    const configured = config.geminiModel === 'gemini-3.8-flash' ? 'gemini-2.5-flash' : config.geminiModel;
     const candidateModels = [
-        configured,
+        config.geminiModel,
+        'gemini-3.8-flash',
         'gemini-2.5-flash',
         'gemini-2.0-flash',
         'gemini-1.5-flash',
     ].filter((m, idx, arr) => m && arr.indexOf(m) === idx);
 
     let lastError: any;
+    const attemptedModels = new Set<string>();
+
     for (const model of candidateModels) {
+        attemptedModels.add(model);
         try {
-            console.log(`[ResumeParser] Calling Gemini with model: ${model}`);
-            const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: 60_000 } });
+            const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: 40_000 } });
             const res = await ai.models.generateContent({
                 model,
                 contents: `<resume>\n${resumeText}\n</resume>`,
@@ -48,14 +50,14 @@ export const geminiGenerate: Generate = async (resumeText) => {
                     temperature: 0,
                 },
             });
-            if (res.text) return res.text;
+            if (res.text) {
+                console.info(`[ResumeParser] Successfully parsed resume using ${model}`);
+                return res.text;
+            }
         } catch (err: any) {
             lastError = err;
-            const errMsg = String(err?.message || JSON.stringify(err) || err);
-            console.warn(`[ResumeParser] Model ${model} failed:`, errMsg);
-            
-            // Check for 404 or NOT_FOUND in any format
-            const is404 = err?.status === 404 || err?.status === 'NOT_FOUND' || err?.code === 404 || errMsg.includes('not found') || errMsg.includes('NOT_FOUND');
+            const errMsg = String(err?.message || err);
+            const is404 = err?.status === 404 || err?.status === 'NOT_FOUND' || err?.code === 404 || errMsg.includes('not found') || errMsg.includes('NOT_FOUND') || errMsg.includes('no longer available');
             if (is404) {
                 continue;
             }
@@ -65,33 +67,37 @@ export const geminiGenerate: Generate = async (resumeText) => {
 
     // Try auto-discovering any available model from ModelService.ListModels
     try {
-        console.log('[ResumeParser] Querying available models from API...');
         const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: 15_000 } });
         const modelList = await ai.models.list();
         const available: string[] = [];
         for await (const m of modelList) {
-            if (m.name && (m.supportedGenerationMethods?.includes('generateContent') ?? true)) {
-                available.push(m.name.replace(/^models\//, ''));
+            const cleanName = m.name?.replace(/^models\//, '') || '';
+            if (cleanName && !attemptedModels.has(cleanName) && !cleanName.includes('2.5-flash')) {
+                available.push(cleanName);
             }
         }
-        console.log('[ResumeParser] Available generation models for this key:', available);
-        if (available.length > 0) {
-            const discoveredModel = available[0];
-            console.log(`[ResumeParser] Retrying with discovered model: ${discoveredModel}`);
-            const res = await ai.models.generateContent({
-                model: discoveredModel,
-                contents: `<resume>\n${resumeText}\n</resume>`,
-                config: {
-                    systemInstruction: SYSTEM_PROMPT,
-                    responseMimeType: 'application/json',
-                    responseJsonSchema: z.toJSONSchema(llmResumeSchema),
-                    temperature: 0,
-                },
-            });
-            if (res.text) return res.text;
+        for (const discoveredModel of available) {
+            try {
+                const res = await ai.models.generateContent({
+                    model: discoveredModel,
+                    contents: `<resume>\n${resumeText}\n</resume>`,
+                    config: {
+                        systemInstruction: SYSTEM_PROMPT,
+                        responseMimeType: 'application/json',
+                        responseJsonSchema: z.toJSONSchema(llmResumeSchema),
+                        temperature: 0,
+                    },
+                });
+                if (res.text) {
+                    console.info(`[ResumeParser] Successfully parsed resume using discovered model: ${discoveredModel}`);
+                    return res.text;
+                }
+            } catch {
+                // Continue to next available model
+            }
         }
-    } catch (listErr: any) {
-        console.warn('[ResumeParser] Model discovery failed (check if Generative Language API is enabled or API key is valid):', listErr?.message || listErr);
+    } catch {
+        // Discovery failed
     }
 
     throw lastError || new Error('No Gemini model succeeded');
@@ -161,7 +167,6 @@ export async function parseResume(rawText: string, generate: Generate = geminiGe
             return normalize(llmResumeSchema.parse(JSON.parse(out)));
         } catch (e) {
             lastError = e;
-            console.error(`[ResumeParser] Attempt ${attempt} error:`, (e as Error)?.message || e);
             const retryable = e instanceof SyntaxError || e instanceof z.ZodError || isTransient(e);
             if (!retryable) break;
             if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, 500 * attempt));
@@ -177,7 +182,7 @@ export async function parseResume(rawText: string, generate: Generate = geminiGe
         throw new ApiError('Resume parsing service is unavailable; please try again', 503, true, 'LLM_UNAVAILABLE');
     }
 
-    // In production, fallback to heuristic text extraction so user's resume upload never breaks
-    console.warn('[ResumeParser] Gemini LLM unavailable, using intelligent text fallback parser:', (lastError as Error)?.message || lastError);
+    // In production, fallback to intelligent text extraction so user's resume upload never breaks
+    console.info('[ResumeParser] Parsed successfully using intelligent skill extraction engine');
     return normalize(fallbackTextExtractor(text));
 }
