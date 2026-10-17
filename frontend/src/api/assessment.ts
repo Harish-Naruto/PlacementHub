@@ -142,6 +142,100 @@ export async function submitAssessmentApi(
   return res.data;
 }
 
+// ---------------------------------------------------------------------------
+// Per-skill verification (assessment score + GitHub evidence -> combined score)
+// ---------------------------------------------------------------------------
+
+export type SkillVerificationStatus =
+  | "verified"
+  | "partially_verified"
+  | "needs_review"
+  | "unsupported"
+  | "unverified";
+
+export type GithubSkillStatus =
+  | "supported"
+  | "partially_supported"
+  | "insufficient_evidence"
+  | "needs_review"
+  | "not_accessible"
+  | "not_checked"
+  | "not_run";
+
+export type GithubReportState = "completed" | "incomplete" | "not_run" | "failed";
+
+export interface SkillEvidenceRef {
+  type: "dependency" | "source_usage" | "configuration" | "contribution";
+  repositoryUrl: string;
+  evidenceUrl?: string;
+  commitSha?: string;
+}
+
+export interface CombinedSkillResult {
+  skill: string;
+  assessmentScore: number | null;
+  githubEvidenceScore: number | null;
+  combinedScore: number | null;
+  verification: { status: SkillVerificationStatus; flagged: boolean; reason: string };
+  githubStatus: GithubSkillStatus;
+  evidenceStrength: "high" | "medium" | "low" | "unknown";
+  evidenceSummary: string;
+  evidenceUrls: string[];
+  assessmentPoints: { earned: number; possible: number } | null;
+  assessmentQuestionIds: string[];
+  evidence: SkillEvidenceRef[];
+  conflicts: string[];
+  resumeReferences: string[];
+}
+
+export interface SkillScoresData {
+  sessionId: string;
+  resumeId: string;
+  weights: { assessment: number; github: number };
+  thresholds: { pass: number; fail: number };
+  verification: Record<SkillVerificationStatus, number> & { total: number; flagged: number };
+  github: {
+    state: GithubReportState;
+    username?: string;
+    checkedAt?: string;
+    repositoriesInspected?: number;
+    limitations: string[];
+    error?: { code: string; message: string };
+  };
+  skills: CombinedSkillResult[];
+  note: string;
+  /** Present on the POST response: what was saved to the student's skill profile. */
+  persistence?:
+    | { skills: number; evidenceCreated: number; evidenceUpdated: number; statusesChanged: number; failed: number }
+    | { error: string };
+}
+
+/** Scores from the assessment (and the last GitHub report, if any). Makes no GitHub requests. */
+export async function fetchSkillScoresApi(token: string, sessionId: string): Promise<SkillScoresData> {
+  const res = await request<{ error: boolean; data: SkillScoresData }>(
+    `/assessments/${sessionId}/skill-scores`,
+    token,
+  );
+  return res.data;
+}
+
+/** Runs GitHub verification for the session's resume, then returns the combined scores. */
+export async function runSkillVerificationApi(
+  token: string,
+  sessionId: string,
+  githubUsername?: string,
+): Promise<SkillScoresData> {
+  const res = await request<{ error: boolean; data: SkillScoresData }>(
+    `/assessments/${sessionId}/skill-scores`,
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify(githubUsername?.trim() ? { githubUsername: githubUsername.trim() } : {}),
+    },
+  );
+  return res.data;
+}
+
 export async function fetchAssessmentScorecardApi(
   token: string,
   sessionId: string,

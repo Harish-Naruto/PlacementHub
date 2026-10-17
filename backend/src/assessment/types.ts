@@ -3,6 +3,9 @@
 // Zero database persistence: everything lives in the in-memory store.
 // ---------------------------------------------------------------------------
 
+import type { VerificationReport } from "../github/types.ts";
+import type { GithubReportState } from "../scoring/skillScoring.ts";
+
 export type QuestionType = "MCQ" | "SHORT_ANSWER" | "CODE_ANALYSIS";
 
 export interface MCQOption {
@@ -81,6 +84,9 @@ export interface AssessmentSession {
   startedAt: number;           // Date.now()
   expiresAt: number;           // startedAt + TTL
   scorecard?: Scorecard;
+  /** Last successful or incomplete GitHub verification for this session (never a failure). */
+  githubReport?: VerificationReport;
+  githubState?: GithubReportState;
 }
 
 // ---------------------------------------------------------------------------

@@ -75,6 +75,8 @@ export interface VerificationReport {
     claims: Claim[];
     summary: Record<ClaimStatus, number>;
     limitations: string[];
+    /** True when a rate limit, request budget or listing failure stopped collection early. */
+    incomplete: boolean;
     assessment_score_changed: false;
 }
 

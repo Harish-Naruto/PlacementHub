@@ -23,7 +23,7 @@ function normalizeSkillName(name: string): string {
 // ---------------------------------------------------------------------------
 // Resolve skill by name or alias
 // ---------------------------------------------------------------------------
-async function resolveOrCreateSkill(skillName: string) {
+export async function resolveOrCreateSkill(skillName: string) {
   const normalized = normalizeSkillName(skillName);
 
   // Try exact name match first (case-insensitive)
@@ -121,6 +121,17 @@ export async function getStudentSkills(userId: string, resumeId?: string) {
       declaredLevel: s.declaredLevel,
       verificationStatus: s.verificationStatus,
       verificationLabel: mapVerificationStatus(s.verificationStatus),
+      // Proof behind the status: assessment results and GitHub evidence (resume links use sourceType OTHER).
+      proof: s.evidence
+        .filter((e) => e.sourceType === "ASSESSMENT" || e.sourceType === "GITHUB_REPOSITORY")
+        .map((e) => ({
+          id: e.id,
+          sourceType: e.sourceType,
+          sourceUrl: e.sourceUrl,
+          description: e.description,
+          status: e.status,
+          createdAt: e.createdAt,
+        })),
       resumeIds: matchedResumes.map((r) => r.id),
       resumes: matchedResumes,
       primaryResumeId: matchedResumes[0]?.id || null,
