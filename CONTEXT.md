@@ -53,7 +53,7 @@ Package manager is **Bun** (`bun.lock` in the root, backend and frontend). The r
 - Database: `prisma7.config.ts` is the Prisma CLI config. `backend/prisma/apply-schema.mjs` (`bun run prisma/apply-schema.mjs`) applies schema changes directly to the remote Supabase DB using `DATABASE_URL` read from `backend/.env`.
 - Required backend env vars (config throws at startup if missing): `DATABASE_URL`, `JWT_ACCESS_SECRET` (at least 32 chars), `RECRUITER_SIGNUP_CODE`. `GEMINI_API_KEY` is required lazily on the first Gemini call.
 - Placement MVP env vars: `PLACEMENT_SIGNUP_CODE` (optional), `INGEST_USE_FIXTURES`, `JOB_PARSE_LLM`. After pulling this work: apply `prisma/migrations/20261017120000_placement_mvp/migration.sql` (see "Database") and optionally run `bun run prisma/seed.ts` for demo data.
-- Optional env vars: `PORT`, `FRONTEND_URL` (also the CORS origin, default `http://localhost:5173`), `DIRECT_URL`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_ACCESS_TTL` (15m), `REFRESH_TOKEN_TTL_DAYS` (7), `RATE_LIMIT_*`, `GEMINI_MODEL` (default `gemini-2.5-flash`), `MAX_RESUME_SIZE_BYTES`, and the `GITHUB_*` settings listed under "GitHub verification".
+- Optional env vars: `PORT`, `FRONTEND_URL` (the CORS origin(s): comma separated, trailing slashes ignored, default `http://localhost:5173`; in development any localhost / 127.0.0.1 port is also allowed, see `utils/cors.ts`), `DIRECT_URL`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_ACCESS_TTL` (15m), `REFRESH_TOKEN_TTL_DAYS` (7), `RATE_LIMIT_*`, `GEMINI_MODEL` (default `gemini-2.5-flash`), `MAX_RESUME_SIZE_BYTES`, and the `GITHUB_*` settings listed under "GitHub verification".
 - `config/index.ts` loads `backend/.env` with `override: true`, so values in the file win over shell env vars.
 
 ## Backend (`backend/src`)
@@ -252,11 +252,11 @@ Pure logic lives in dedicated folders (no database, network or LLM, all unit tes
 - **Seed** ([prisma/seed.ts](backend/prisma/seed.ts), `bun run prisma/seed.ts`): SYNTHETIC demo data and idempotent. Skills and aliases, a placement user, two recruiters with companies, 12 students (strong, padded, GitHub-only, low CGPA, wrong branch, wrong batch), one Acme opening that arrives from four places and ends up as one job, five API fixture jobs, and applications at several stages. Password for every demo account is `Demo@12345` (emails end in `@demo.placementhub.test`; the script prints them). It writes to the database in `backend/.env`.
 
 ### Database ([prisma/schema.prisma](backend/prisma/schema.prisma))
-Migrations: `init`, `add_parsed_resume` and `20261017120000_placement_mvp` (idempotent SQL: `PLACEMENT` role, score columns on `StudentSkill`, job ingestion fields, application snapshots). The remote database also drifted earlier (optional `institutionId`) without a migration file, so apply the new one with the helper instead of `prisma migrate`:
+Migrations: `init`, `add_parsed_resume`, `20261017100000_auth_and_drift` and `20261017120000_placement_mvp`. The last two are idempotent SQL. `auth_and_drift` creates what the auth code needs but the first two never did (`AuthSession`, `User.passwordHash`, a required email, an optional `StudentProfile.institutionId`); a database built only from `init` and `add_parsed_resume` fails at login with "The table public.AuthSession does not exist". `placement_mvp` adds the `PLACEMENT` role, score columns on `StudentSkill`, job ingestion fields and application snapshots. Applying all four to an empty database leaves no difference from `schema.prisma`. The remote database also drifted earlier (optional `institutionId`) without a migration file, so apply the new one with the helper instead of `prisma migrate`:
 
 ```
 cd backend
-bun run prisma/apply-sql.mjs prisma/migrations/20261017120000_placement_mvp/migration.sql
+bun run prisma/apply-sql.mjs prisma/migrations/20261017100000_auth_and_drift/migration.sql prisma/migrations/20261017120000_placement_mvp/migration.sql
 bunx prisma generate --config prisma7.config.ts
 bun run prisma/seed.ts          # optional demo data
 ```

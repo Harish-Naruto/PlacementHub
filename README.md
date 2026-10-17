@@ -39,9 +39,11 @@ cp backend/.env.example backend/.env
 #   fill in DATABASE_URL, JWT_ACCESS_SECRET (32+ chars), RECRUITER_SIGNUP_CODE, PLACEMENT_SIGNUP_CODE,
 #   GEMINI_API_KEY and GITHUB_TOKEN (recommended: without a token GitHub allows ~1 verification per hour)
 
-# 3. Create the schema changes and (optionally) demo data
+# 3. Create the schema changes and (optionally) demo data.
+#    A brand-new empty database first needs the two older migrations:
+#    prisma/migrations/20261016133541_init and 20261016180000_add_parsed_resume (same command, run once).
 cd backend
-bun run prisma/apply-sql.mjs prisma/migrations/20261017120000_placement_mvp/migration.sql
+bun run prisma/apply-sql.mjs prisma/migrations/20261017100000_auth_and_drift/migration.sql prisma/migrations/20261017120000_placement_mvp/migration.sql
 bunx prisma generate --config prisma7.config.ts
 bun run prisma/seed.ts          # synthetic demo data; prints the logins
 cd ..
