@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -66,6 +68,14 @@ const config = {
   // Used when the primary model is overloaded (503/429) instead of retrying it.
   geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL || "gemini-2.5-flash",
   resumeMaxBytes: 5 * 1024 * 1024,
+
+  // GitHub verification (token is optional; use a public-read-only token, server side only)
+  githubToken: process.env.GITHUB_TOKEN || undefined,
+  githubTimeoutMs: optionalInt("GITHUB_TIMEOUT_MS", 10_000),
+  githubMaxRequests: optionalInt("GITHUB_MAX_REQUESTS", 150),
+  githubMaxRepos: optionalInt("GITHUB_MAX_REPOS", 6),
+  githubMaxFilesPerRepo: optionalInt("GITHUB_MAX_FILES_PER_REPO", 12),
+  githubMaxFileBytes: optionalInt("GITHUB_MAX_FILE_BYTES", 100_000),
 
   // Database
   databaseUrl: required("DATABASE_URL"),
