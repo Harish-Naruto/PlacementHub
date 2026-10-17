@@ -133,21 +133,27 @@ export async function collectRepo(
         }
     };
 
-    try {
-        const commits = await client.json<{ sha: string }[]>(`/repos/${o}/${r}/commits?per_page=1&sha=${encodeURIComponent(meta.default_branch)}`);
-        facts.sha = commits[0]?.sha ?? null;
-    } catch (e) {
-        soft(e, 'Latest commit lookup');
-    }
+    // The latest-commit and language lookups do not depend on each other, so run them together.
+    await Promise.all([
+        (async () => {
+            try {
+                const commits = await client.json<{ sha: string }[]>(`/repos/${o}/${r}/commits?per_page=1&sha=${encodeURIComponent(meta.default_branch)}`);
+                facts.sha = commits[0]?.sha ?? null;
+            } catch (e) {
+                soft(e, 'Latest commit lookup');
+            }
+        })(),
+        (async () => {
+            try {
+                facts.languages = await client.json<Record<string, number>>(`/repos/${o}/${r}/languages`);
+            } catch (e) {
+                soft(e, 'Language statistics');
+            }
+        })(),
+    ]);
     if (!facts.sha) {
         notes.push('No commit available (empty repository or lookup failed); nothing could be inspected.');
         return { meta, facts, status: 'partially_examined', filesExamined: 0, notes, incomplete };
-    }
-
-    try {
-        facts.languages = await client.json<Record<string, number>>(`/repos/${o}/${r}/languages`);
-    } catch (e) {
-        soft(e, 'Language statistics');
     }
 
     try {

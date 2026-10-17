@@ -109,6 +109,11 @@ export const jobListQuerySchema = z.object({
     .optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(50).optional().default(20),
+  // true adds the signed-in student's evidence-backed fit to every job card and sorts by it
+  withFit: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
 });
 
 export type JobListQuery = z.infer<typeof jobListQuerySchema>;

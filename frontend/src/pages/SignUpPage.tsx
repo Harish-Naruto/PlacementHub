@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { homeFor, type Role } from "../lib/roles";
 
 export const SignUpPage: React.FC = () => {
   const { user, register } = useAuth();
   const navigate = useNavigate();
 
-  const [role, setRole] = useState<"STUDENT" | "RECRUITER">("STUDENT");
+  const [role, setRole] = useState<Role>("STUDENT");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +17,7 @@ export const SignUpPage: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      navigate("/dashboard", { replace: true });
+      navigate(homeFor(user.role), { replace: true });
     }
   }, [user, navigate]);
 
@@ -30,11 +31,11 @@ export const SignUpPage: React.FC = () => {
         email,
         password,
         role,
-        invitationCode: role === "RECRUITER" ? invitationCode : undefined,
+        invitationCode: role !== "STUDENT" ? invitationCode : undefined,
       });
-      navigate("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Failed to create account. Please check your details.");
+      // The effect above sends the user to their role's home once the session is set.
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : "Failed to create account. Please check your details.");
     } finally {
       setLoading(false);
     }
@@ -81,7 +82,7 @@ export const SignUpPage: React.FC = () => {
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            Student Candidate
+            Student
           </button>
           <button
             type="button"
@@ -92,7 +93,18 @@ export const SignUpPage: React.FC = () => {
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            Hiring Recruiter
+            Recruiter
+          </button>
+          <button
+            type="button"
+            onClick={() => setRole("PLACEMENT")}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+              role === "PLACEMENT"
+                ? "bg-white text-emerald-600 shadow-sm"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            Placement
           </button>
         </div>
 
@@ -142,17 +154,17 @@ export const SignUpPage: React.FC = () => {
             />
           </div>
 
-          {role === "RECRUITER" && (
+          {role !== "STUDENT" && (
             <div>
               <label className="block text-xs font-bold text-purple-700 uppercase mb-1">
-                Recruiter Invitation Code
+                {role === "PLACEMENT" ? "Placement" : "Recruiter"} Invitation Code
               </label>
               <input
                 type="text"
                 required
                 value={invitationCode}
                 onChange={(e) => setInvitationCode(e.target.value)}
-                placeholder="Enter recruiter access code"
+                placeholder={role === "PLACEMENT" ? "Enter placement team code" : "Enter recruiter access code"}
                 className="w-full px-4 py-2.5 bg-purple-50/50 border border-purple-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
               <p className="text-[11px] text-purple-600 mt-1">Requires official campus invite code.</p>
@@ -165,10 +177,12 @@ export const SignUpPage: React.FC = () => {
             className={`w-full py-3 rounded-xl text-sm font-bold text-white shadow-md transition-all ${
               role === "STUDENT"
                 ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/25"
-                : "bg-purple-600 hover:bg-purple-700 shadow-purple-500/25"
+                : role === "RECRUITER"
+                  ? "bg-purple-600 hover:bg-purple-700 shadow-purple-500/25"
+                  : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/25"
             } disabled:opacity-50`}
           >
-            {loading ? "Creating Account..." : `Sign Up as ${role === "STUDENT" ? "Student" : "Recruiter"}`}
+            {loading ? "Creating Account..." : `Sign Up as ${role === "STUDENT" ? "Student" : role === "RECRUITER" ? "Recruiter" : "Placement Team"}`}
           </button>
         </form>
 

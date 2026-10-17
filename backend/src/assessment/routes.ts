@@ -38,7 +38,9 @@ router.post("/generate", async (req, res, next) => {
       throw new ApiError("Missing required parameter: resumeId", 400);
     }
 
+    const t0 = Date.now();
     const result = await generateAssessment(userId, resumeId);
+    console.info(`[Timing] assessment generated in ${Date.now() - t0}ms`);
     res.status(201).json({
       error: false,
       message: "Assessment generated successfully",
@@ -85,10 +87,13 @@ router.post("/:sessionId/submit", async (req, res, next) => {
     }
 
     const answersRecord = (answers && typeof answers === "object") ? answers : {};
+    const t0 = Date.now();
     const result = await submitAssessment(userId, sessionId, answersRecord);
+    console.info(`[Timing] assessment graded in ${Date.now() - t0}ms`);
 
-    // Record the assessment proof on the student's skills. Never allowed to fail the submission.
-    await saveVerificationEvidence(userId, sessionId);
+    // Record the assessment proof on the student's skills in the background: the student already has
+    // their scorecard, so the response must not wait for these database writes (and they never fail it).
+    void saveVerificationEvidence(userId, sessionId);
 
     res.status(200).json({
       error: false,
@@ -145,8 +150,11 @@ type Persistence = PersistenceSummary | { error: string };
 
 /** Writes scored skills to StudentSkill + SkillEvidence. Logs only the error type; never throws. */
 async function persistSafely(userId: string, scores: SkillScoresResponse): Promise<Persistence> {
+  const started = Date.now();
   try {
-    return await persistSkillVerification(userId, scores.sessionId, scores.skills);
+    const summary = await persistSkillVerification(userId, scores.sessionId, scores.skills);
+    console.info(`[SkillEvidence] saved ${summary.skills} skills (${summary.failed} failed) in ${Date.now() - started}ms`);
+    return summary;
   } catch (err) {
     console.error("[SkillEvidence] could not save skill verification:", (err as Error)?.name);
     return { error: "Could not save skill verification to your profile" };

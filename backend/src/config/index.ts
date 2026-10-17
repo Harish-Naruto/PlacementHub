@@ -50,6 +50,8 @@ const refreshTokenTtlDays = optionalInt("REFRESH_TOKEN_TTL_DAYS", 7);
 // ---------------------------------------------------------------------------
 
 const recruiterSignupCode = required("RECRUITER_SIGNUP_CODE");
+// Optional: when unset, nobody can register as a placement-team user.
+const placementSignupCode = process.env.PLACEMENT_SIGNUP_CODE || undefined;
 
 // ---------------------------------------------------------------------------
 // Export
@@ -94,6 +96,7 @@ const config = {
 
   // Recruiter
   recruiterSignupCode,
+  placementSignupCode,
 
   // Computed helpers
   isProduction: () => (process.env.NODE_ENV || "development") === "production",

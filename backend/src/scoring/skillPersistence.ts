@@ -33,8 +33,17 @@ export interface PlannedEvidence {
     status: EvidenceRowStatus;
 }
 
+export interface PlannedScores {
+    assessmentScore: number | null;
+    githubScore: number | null;
+    combinedScore: number | null;
+    evidenceStrength: string;
+}
+
 export interface PlannedSkill {
     skill: string;
+    /** Stored on StudentSkill so matching and ranking can read numbers without re-running anything. */
+    scores: PlannedScores;
     /** `null` = leave the existing status alone. */
     verificationStatus: StudentSkillStatus | null;
     evidence: PlannedEvidence[];
@@ -95,7 +104,17 @@ export function planSkillPersistence(results: CombinedSkillResult[], ctx: { sess
             });
         }
 
-        return { skill: r.skill, verificationStatus: studentSkillStatusFor(r), evidence };
+        return {
+            skill: r.skill,
+            scores: {
+                assessmentScore: r.assessmentScore,
+                githubScore: r.githubEvidenceScore,
+                combinedScore: r.combinedScore,
+                evidenceStrength: r.evidenceStrength,
+            },
+            verificationStatus: studentSkillStatusFor(r),
+            evidence,
+        };
     });
 }
 
@@ -111,6 +130,8 @@ export interface SkillEvidenceRepo {
     /** The student's StudentSkill for the skill, created as SELF_DECLARED if missing. */
     ensureStudentSkill(profileId: string, skillId: string): Promise<{ id: string; verificationStatus: StudentSkillStatus }>;
     setVerificationStatus(studentSkillId: string, status: StudentSkillStatus): Promise<void>;
+    /** Stores the numeric scores of the latest run. A score that is null (unavailable) keeps its previous value. */
+    setScores?(studentSkillId: string, scores: PlannedScores): Promise<void>;
     /** Insert, or update description/status of the row with the same (studentSkill, sourceType, sourceUrl). */
     upsertEvidence(studentSkillId: string, evidence: PlannedEvidence): Promise<'created' | 'updated'>;
 }
@@ -123,27 +144,46 @@ export interface PersistenceSummary {
     failed: number;
 }
 
-export async function applySkillPlan(repo: SkillEvidenceRepo, userId: string, plan: PlannedSkill[]): Promise<PersistenceSummary> {
+/** Skills handled at once. Each skill is several round-trips to a remote database, so serial work is slow. */
+export const PERSIST_CONCURRENCY = 6;
+
+export async function applySkillPlan(
+    repo: SkillEvidenceRepo,
+    userId: string,
+    plan: PlannedSkill[],
+    concurrency = PERSIST_CONCURRENCY,
+): Promise<PersistenceSummary> {
     const summary: PersistenceSummary = { skills: 0, evidenceCreated: 0, evidenceUpdated: 0, statusesChanged: 0, failed: 0 };
     const profileId = await repo.getProfileId(userId);
 
-    for (const item of plan) {
+    const saveOne = async (item: PlannedSkill) => {
         try {
             const skillId = await repo.resolveSkillId(item.skill);
             const studentSkill = await repo.ensureStudentSkill(profileId, skillId);
-            if (item.verificationStatus && item.verificationStatus !== studentSkill.verificationStatus) {
-                await repo.setVerificationStatus(studentSkill.id, item.verificationStatus);
-                summary.statusesChanged++;
-            }
-            for (const e of item.evidence) {
+            const status = item.verificationStatus && item.verificationStatus !== studentSkill.verificationStatus
+                ? repo.setVerificationStatus(studentSkill.id, item.verificationStatus).then(() => {
+                      summary.statusesChanged++;
+                  })
+                : Promise.resolve();
+            // Evidence rows of one skill are independent of each other: write them in parallel.
+            const rows = item.evidence.map(async (e) => {
                 const outcome = await repo.upsertEvidence(studentSkill.id, e);
                 if (outcome === 'created') summary.evidenceCreated++;
                 else summary.evidenceUpdated++;
-            }
+            });
+            const scores = repo.setScores ? repo.setScores(studentSkill.id, item.scores) : Promise.resolve();
+            await Promise.all([status, scores, ...rows]);
             summary.skills++;
         } catch {
             summary.failed++; // one bad skill must not stop the rest
         }
-    }
+    };
+
+    // Bounded worker pool: distinct skills are independent, but the DB pool is finite.
+    const queue = [...plan];
+    const worker = async () => {
+        for (let item = queue.shift(); item; item = queue.shift()) await saveOne(item);
+    };
+    await Promise.all(Array.from({ length: Math.max(1, Math.min(concurrency, plan.length)) }, worker));
     return summary;
 }

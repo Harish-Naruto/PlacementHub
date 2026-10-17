@@ -5,6 +5,7 @@ import {
     planSkillPersistence,
     studentSkillStatusFor,
     type PlannedEvidence,
+    type PlannedScores,
     type SkillEvidenceRepo,
     type StudentSkillStatus,
 } from '../src/scoring/skillPersistence';
@@ -67,6 +68,7 @@ function fakeRepo(opts: { failOnSkill?: string; existing?: Record<string, Studen
     const skills = new Map<string, string>(); // name(lower) -> skillId
     const studentSkills = new Map<string, { id: string; skillName: string; verificationStatus: StudentSkillStatus }>();
     const evidence = new Map<string, PlannedEvidence & { studentSkillId: string }>();
+    const scores = new Map<string, PlannedScores>(); // studentSkillId -> latest scores
     let seq = 0;
     const nameOf = new Map<string, string>(); // skillId -> name
 
@@ -95,6 +97,9 @@ function fakeRepo(opts: { failOnSkill?: string; existing?: Record<string, Studen
         async setVerificationStatus(studentSkillId, status) {
             for (const s of studentSkills.values()) if (s.id === studentSkillId) s.verificationStatus = status;
         },
+        async setScores(studentSkillId, s) {
+            scores.set(studentSkillId, s);
+        },
         async upsertEvidence(studentSkillId, e) {
             const key = `${studentSkillId}|${e.sourceType}|${e.sourceUrl}`;
             const had = evidence.has(key);
@@ -107,10 +112,25 @@ function fakeRepo(opts: { failOnSkill?: string; existing?: Record<string, Studen
         const id = [...studentSkills.values()].find((s) => s.skillName === name)?.id;
         return [...evidence.values()].filter((e) => e.studentSkillId === id);
     };
-    return { repo, statusOf, evidenceOf, evidence, studentSkills };
+    const scoresOf = (name: string) => scores.get([...studentSkills.values()].find((s) => s.skillName === name)?.id ?? '');
+    return { repo, statusOf, evidenceOf, scoresOf, evidence, studentSkills };
 }
 
 // ---- the plan ---------------------------------------------------------------------------------
+
+describe('numeric scores', () => {
+    test('the plan carries each skill\x27s assessment, GitHub and combined scores', () => {
+        const plan = planSkillPersistence(results(), { sessionId: 'sess-1' });
+        expect(plan.find((p) => p.skill === 'React')!.scores).toMatchObject({ assessmentScore: 90, combinedScore: 92, githubScore: 100 });
+        expect(plan.find((p) => p.skill === 'Kubernetes')!.scores).toMatchObject({ assessmentScore: null, combinedScore: null });
+    });
+
+    test('applying a plan stores the scores through the repository', async () => {
+        const { repo, scoresOf } = fakeRepo();
+        await applySkillPlan(repo, 'user-1', planSkillPersistence(results(), { sessionId: 'sess-1' }));
+        expect(scoresOf('React')).toMatchObject({ assessmentScore: 90, combinedScore: 92 });
+    });
+});
 
 describe('planSkillPersistence', () => {
     const plan = planSkillPersistence(results(), { sessionId: 'sess-1' });
@@ -212,5 +232,36 @@ describe('applySkillPlan', () => {
         await applySkillPlan(f.repo, 'user-1', planSkillPersistence(results(), { sessionId: 'sess-2' }));
         const rows = f.evidenceOf('React').filter((e) => e.sourceType === 'ASSESSMENT');
         expect(rows.map((r) => r.sourceUrl).sort()).toEqual(['assessment:sess-1', 'assessment:sess-2']);
+    });
+});
+
+describe('applySkillPlan concurrency', () => {
+    test('works on several skills at once, but never more than the limit', async () => {
+        let inFlight = 0;
+        let peak = 0;
+        const slow = async <T>(v: T): Promise<T> => {
+            inFlight++;
+            peak = Math.max(peak, inFlight);
+            await new Promise((r) => setTimeout(r, 5));
+            inFlight--;
+            return v;
+        };
+        const repo: SkillEvidenceRepo = {
+            getProfileId: async () => 'p',
+            resolveSkillId: (n) => slow(`id-${n}`),
+            ensureStudentSkill: (_p, id) => slow({ id, verificationStatus: 'SELF_DECLARED' as StudentSkillStatus }),
+            setVerificationStatus: () => slow(undefined),
+            upsertEvidence: () => slow('created' as const),
+        };
+        const plan = Array.from({ length: 20 }, (_, i) => ({
+            skill: `S${i}`,
+            scores: { assessmentScore: 80, githubScore: null, combinedScore: 80, evidenceStrength: 'unknown' },
+            verificationStatus: 'EVALUATED' as StudentSkillStatus,
+            evidence: [{ sourceType: 'ASSESSMENT' as const, sourceUrl: `assessment:${i}`, description: 'd', status: 'EVALUATED' as const }],
+        }));
+        const summary = await applySkillPlan(repo, 'u', plan, 4);
+        expect(summary).toMatchObject({ skills: 20, failed: 0, evidenceCreated: 20, statusesChanged: 20 });
+        expect(peak).toBeGreaterThan(1); // not serial
+        expect(peak).toBeLessThanOrEqual(4 * 2); // 4 workers, each with at most status + evidence writes in flight
     });
 });

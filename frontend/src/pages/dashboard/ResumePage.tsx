@@ -1,33 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   uploadResumeApi,
   fetchStudentResumes,
   deleteStudentResumeApi,
-  type ResumeItem,
 } from "../../api/student";
+import { errorMessage } from "../../api/match";
+import { ClaimCheckPanel } from "../../components/student/ClaimCheckPanel";
+import { useAsync } from "../../components/student/useAsync";
+
+/** Loosely typed parts of the parsed resume JSON that this page reads. */
+interface ParsedSkill {
+  name?: string;
+  canonical_name?: string;
+  category?: string;
+}
 
 export const ResumePage: React.FC = () => {
   const { accessToken } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [resumes, setResumes] = useState<ResumeItem[]>([]);
-  const [loadingResumes, setLoadingResumes] = useState(true);
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const loadResumes = () => {
-    if (!accessToken) return;
-    setLoadingResumes(true);
-    fetchStudentResumes(accessToken)
-      .then(setResumes)
-      .catch(() => {})
-      .finally(() => setLoadingResumes(false));
-  };
-
-  useEffect(() => {
-    loadResumes();
-  }, [accessToken]);
+  const { data, loading: loadingResumes, reload: loadResumes } = useAsync(async () => (accessToken ? fetchStudentResumes(accessToken) : []), "resumes");
+  const resumes = (data ?? []).filter((r) => !removedIds.has(r.id));
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +38,8 @@ export const ResumePage: React.FC = () => {
       setMessage({ type: "success", text: res.message || "Resume uploaded and parsed successfully!" });
       setFile(null);
       loadResumes();
-    } catch (err: any) {
-      setMessage({ type: "error", text: err.message || "Upload failed." });
+    } catch (err) {
+      setMessage({ type: "error", text: errorMessage(err, "Upload failed.") });
     } finally {
       setUploading(false);
     }
@@ -52,10 +50,10 @@ export const ResumePage: React.FC = () => {
     if (!confirm("Are you sure you want to remove this resume record?")) return;
     try {
       await deleteStudentResumeApi(accessToken, resumeId);
-      setResumes((prev) => prev.filter((r) => r.id !== resumeId));
+      setRemovedIds((prev) => new Set(prev).add(resumeId));
       setMessage({ type: "success", text: "Resume removed." });
-    } catch (err: any) {
-      setMessage({ type: "error", text: err.message || "Failed to delete resume." });
+    } catch (err) {
+      setMessage({ type: "error", text: errorMessage(err, "Failed to delete resume.") });
     }
   };
 
@@ -133,8 +131,8 @@ export const ResumePage: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {resumes.map((item, index) => {
-              const resumeData = item.resume as any;
-              const skillsList = item.skills || (resumeData?.skills || []).map((s: any) => ({
+              const resumeData = item.resume as { skills?: ParsedSkill[] } | null;
+              const skillsList: { name?: string; category?: string }[] = item.skills || (resumeData?.skills || []).map((s) => ({
                 name: s.canonical_name || s.name,
                 category: s.category || "Technology",
               }));
@@ -202,7 +200,7 @@ export const ResumePage: React.FC = () => {
                       <p className="text-xs text-slate-400 italic">No specific technical skills detected in this resume.</p>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
-                        {skillsList.map((sk: any, i: number) => (
+                        {skillsList.map((sk, i) => (
                           <span
                             key={i}
                             className="px-3 py-1 rounded-full bg-slate-50 hover:bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs transition"
@@ -213,6 +211,8 @@ export const ResumePage: React.FC = () => {
                       </div>
                     )}
                   </div>
+
+                  <ClaimCheckPanel token={accessToken} resumeId={item.id} />
                 </div>
               );
             })}

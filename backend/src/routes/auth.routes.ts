@@ -53,7 +53,6 @@ router.post(
       }
       
       const result = await authService.register(parsed.data);
-      console.log(result)
       setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
 
       res.status(201).json({

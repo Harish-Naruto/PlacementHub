@@ -20,6 +20,23 @@ import { AssessmentPage } from "./pages/dashboard/AssessmentPage";
 import { ProjectsPage } from "./pages/dashboard/ProjectsPage";
 import { JobsPage } from "./pages/dashboard/JobsPage";
 import { ApplicationsPage } from "./pages/dashboard/ApplicationsPage";
+import { JobDetailPage } from "./pages/dashboard/JobDetailPage";
+import { ResumeBuilderPage } from "./pages/dashboard/ResumeBuilderPage";
+
+// Recruiter portal
+import { PortalLayout } from "./components/layout/PortalLayout";
+import { RecruiterJobsPage } from "./pages/recruiter/RecruiterJobsPage";
+import { RecruiterProfilePage } from "./pages/recruiter/RecruiterProfilePage";
+import { RecruiterPostJobPage } from "./pages/recruiter/RecruiterPostJobPage";
+import { RecruiterJobDetailPage } from "./pages/recruiter/RecruiterJobDetailPage";
+
+// Placement team portal
+import { PlacementOverviewPage } from "./pages/placement/PlacementOverviewPage";
+import { PlacementIngestPage } from "./pages/placement/PlacementIngestPage";
+import { PlacementJobsPage } from "./pages/placement/PlacementJobsPage";
+import { PlacementRankPage } from "./pages/placement/PlacementRankPage";
+import { PlacementPipelinePage } from "./pages/placement/PlacementPipelinePage";
+import { PlacementStudentsPage } from "./pages/placement/PlacementStudentsPage";
 
 export function App() {
   return (
@@ -41,7 +58,7 @@ export function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["STUDENT"]}>
                 <DashboardLayout />
               </ProtectedRoute>
             }
@@ -53,7 +70,60 @@ export function App() {
             <Route path="assessment" element={<AssessmentPage />} />
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="jobs" element={<JobsPage />} />
+            <Route path="jobs/:jobId" element={<JobDetailPage />} />
+            <Route path="jobs/:jobId/resume" element={<ResumeBuilderPage />} />
             <Route path="applications" element={<ApplicationsPage />} />
+          </Route>
+
+          {/* Recruiter portal */}
+          <Route
+            path="/recruiter"
+            element={
+              <ProtectedRoute allowedRoles={["RECRUITER"]}>
+                <PortalLayout
+                  portal="Recruiter"
+                  accent="purple"
+                  nav={[
+                    { to: "/recruiter", label: "My jobs", end: true },
+                    { to: "/recruiter/jobs/new", label: "Post a job" },
+                    { to: "/recruiter/profile", label: "Company profile" },
+                  ]}
+                />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<RecruiterJobsPage />} />
+            <Route path="profile" element={<RecruiterProfilePage />} />
+            <Route path="jobs/new" element={<RecruiterPostJobPage />} />
+            <Route path="jobs/:jobId" element={<RecruiterJobDetailPage />} />
+          </Route>
+
+          {/* Placement team portal */}
+          <Route
+            path="/placement"
+            element={
+              <ProtectedRoute allowedRoles={["PLACEMENT"]}>
+                <PortalLayout
+                  portal="Placement team"
+                  accent="emerald"
+                  nav={[
+                    { to: "/placement", label: "Overview", end: true },
+                    { to: "/placement/ingest", label: "Ingest openings" },
+                    { to: "/placement/jobs", label: "Openings" },
+                    { to: "/placement/rank", label: "Batch ranking" },
+                    { to: "/placement/pipeline", label: "Pipeline" },
+                    { to: "/placement/students", label: "Students" },
+                  ]}
+                />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<PlacementOverviewPage />} />
+            <Route path="ingest" element={<PlacementIngestPage />} />
+            <Route path="jobs" element={<PlacementJobsPage />} />
+            <Route path="rank" element={<PlacementRankPage />} />
+            <Route path="pipeline" element={<PlacementPipelinePage />} />
+            <Route path="students" element={<PlacementStudentsPage />} />
           </Route>
 
           {/* Fallback */}

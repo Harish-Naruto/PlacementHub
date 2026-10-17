@@ -4,6 +4,9 @@ import { z } from "zod";
 // Password policy
 // ---------------------------------------------------------------------------
 
+const ROLES = ["STUDENT", "RECRUITER", "PLACEMENT"] as const;
+type Role = (typeof ROLES)[number];
+
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 128;
 
@@ -29,9 +32,9 @@ export const registerSchema = z.object({
   role: z
     .string()
     .optional()
-    .transform((r) => (r ? (r.toUpperCase() as "STUDENT" | "RECRUITER") : "STUDENT"))
-    .refine((r) => r === "STUDENT" || r === "RECRUITER", {
-      message: "Role must be STUDENT or RECRUITER",
+    .transform((r) => (r ? (r.toUpperCase() as Role) : "STUDENT"))
+    .refine((r) => ROLES.includes(r), {
+      message: "Role must be STUDENT, RECRUITER or PLACEMENT",
     }),
   invitationCode: z.string().optional(),
 });
@@ -51,9 +54,9 @@ export const loginSchema = z.object({
   role: z
     .string()
     .optional()
-    .transform((r) => (r ? (r.toUpperCase() as "STUDENT" | "RECRUITER") : undefined))
-    .refine((r) => r === undefined || r === "STUDENT" || r === "RECRUITER", {
-      message: "Role must be STUDENT or RECRUITER",
+    .transform((r) => (r ? (r.toUpperCase() as Role) : undefined))
+    .refine((r) => r === undefined || ROLES.includes(r), {
+      message: "Role must be STUDENT, RECRUITER or PLACEMENT",
     }),
 });
 

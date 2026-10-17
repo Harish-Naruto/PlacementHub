@@ -4,6 +4,7 @@ import { extractText } from "../resume/extractText.ts";
 import { parseResume } from "../resume/parseResume.ts";
 import type { ParsedResume } from "../resume/schema.ts";
 import type { Express } from "express";
+import { resolveOrCreateSkill } from "./skill.service.ts";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -58,46 +59,27 @@ export async function saveResume(userId: string, file?: Express.Multer.File) {
     }
 
     if (parsed.skills && Array.isArray(parsed.skills)) {
+      // One entry per canonical skill, then a bounded worker pool: each skill is several round-trips to a remote database.
+      const unique = new Map<string, { name: string }>();
       for (const item of parsed.skills) {
         const skillName = (item.canonical_name || item.name || "").trim();
-        if (!skillName) continue;
-
-        let skill = await prisma.skill.findFirst({
-          where: { name: { equals: skillName, mode: "insensitive" } },
-        });
-        if (!skill) {
-          skill = await prisma.skill.create({
-            data: { name: skillName, category: item.category || undefined },
-          });
-        }
-
-        let studentSkill = await prisma.studentSkill.findUnique({
-          where: {
-            studentProfileId_skillId: {
-              studentProfileId: profile.id,
-              skillId: skill.id,
-            },
-          },
-        });
-
-        if (!studentSkill) {
-          studentSkill = await prisma.studentSkill.create({
-            data: {
-              studentProfileId: profile.id,
-              skillId: skill.id,
-              declaredLevel: "INTERMEDIATE",
-              verificationStatus: "SELF_DECLARED",
-            },
-          });
-        }
-
-        // Link skill to this specific resume ID via SkillEvidence
+        if (skillName && !unique.has(skillName.toLowerCase())) unique.set(skillName.toLowerCase(), { name: skillName });
+      }
+      const profileId = profile.id;
+      const syncOne = async ({ name }: { name: string }) => {
         try {
+          const skill = await resolveOrCreateSkill(name);
+          const studentSkill =
+            (await prisma.studentSkill.findUnique({
+              where: { studentProfileId_skillId: { studentProfileId: profileId, skillId: skill.id } },
+            })) ??
+            (await prisma.studentSkill.create({
+              data: { studentProfileId: profileId, skillId: skill.id, declaredLevel: "INTERMEDIATE", verificationStatus: "SELF_DECLARED" },
+            }));
+          // Link skill to this specific resume ID via SkillEvidence
           const evidenceExists = await prisma.skillEvidence.findFirst({
-            where: {
-              studentSkillId: studentSkill.id,
-              sourceUrl: row.id,
-            },
+            where: { studentSkillId: studentSkill.id, sourceUrl: row.id },
+            select: { id: true },
           });
           if (!evidenceExists) {
             await prisma.skillEvidence.create({
@@ -111,9 +93,14 @@ export async function saveResume(userId: string, file?: Express.Multer.File) {
             });
           }
         } catch {
-          // non-fatal evidence logging
+          // non-fatal: one skill failing must not stop the others
         }
-      }
+      };
+      const queue = [...unique.values()];
+      const worker = async () => {
+        for (let next = queue.shift(); next; next = queue.shift()) await syncOne(next);
+      };
+      await Promise.all(Array.from({ length: Math.min(6, queue.length) }, worker));
     }
   } catch (syncErr) {
     console.error("Non-fatal: could not auto-sync parsed skills to student profile:", syncErr);

@@ -28,8 +28,9 @@ describe('normalization', () => {
         expect(canonicalize('React.js')).toBe('React');
         expect(canonicalize('NodeJS')).toBe('Node.js');
         expect(canonicalize('Postgres')).toBe('PostgreSQL');
-        expect(canonicalize('Java')).toBeNull();
-        expect(canonicalize('JavaScript')).toBeNull();
+        expect(canonicalize('Java')).toBe('Java');
+        expect(canonicalize('JavaScript')).toBe('JavaScript');
+        expect(canonicalize('NotARealSkill')).toBeNull();
     });
 
     test('urls: https only, bad ones dropped', () => {
@@ -41,7 +42,7 @@ describe('normalization', () => {
     test('normalize keeps original name and cleans urls', () => {
         const out = normalize(valid as never);
         expect(out.skills[0]).toMatchObject({ name: 'ReactJS', canonical_name: 'React' });
-        expect(out.skills[1]!.canonical_name).toBeNull();
+        expect(out.skills[1]!.canonical_name).toBe('Java');
         expect(out.projects[0]!.repository_urls).toEqual(['https://github.com/a/editor']);
         expect(out.links.portfolios).toEqual([]);
     });

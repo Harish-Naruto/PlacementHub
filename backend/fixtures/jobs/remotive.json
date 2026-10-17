@@ -1,0 +1,55 @@
+{
+  "_comment": "SAMPLE DATA in the shape of the Remotive API response, for offline demos. These are not real listings. Companies and ids are invented.",
+  "jobs": [
+    {
+      "id": 900001,
+      "url": "https://remotive.com/remote-jobs/software-dev/sample-900001",
+      "title": "React.js Developer",
+      "company_name": "Acme Technologies Pvt Ltd",
+      "candidate_required_location": "India",
+      "job_type": "full_time",
+      "tags": ["React", "JavaScript", "REST"],
+      "description": "<p>We are looking for a React.js developer to build customer dashboards.</p><h3>Requirements</h3><ul><li>Strong React and JavaScript</li><li>Experience with Node.js and REST APIs</li><li>Git</li></ul><h3>Nice to have</h3><ul><li>Docker</li><li>TypeScript</li></ul>"
+    },
+    {
+      "id": 900002,
+      "url": "https://remotive.com/remote-jobs/software-dev/sample-900002",
+      "title": "Backend Engineer (Node.js)",
+      "company_name": "Globex Software",
+      "candidate_required_location": "Worldwide",
+      "job_type": "full_time",
+      "tags": ["Node.js", "PostgreSQL"],
+      "description": "<p>Build APIs for a logistics platform.</p><h3>Requirements</h3><ul><li>Node.js and Express.js</li><li>PostgreSQL and SQL</li><li>REST API design</li></ul><h3>Preferred</h3><ul><li>Redis</li><li>AWS</li><li>Kubernetes</li></ul>"
+    },
+    {
+      "id": 900003,
+      "url": "https://remotive.com/remote-jobs/software-dev/sample-900003",
+      "title": "Python Data Analyst Intern",
+      "company_name": "Initech Analytics",
+      "candidate_required_location": "India",
+      "job_type": "internship",
+      "tags": ["Python", "SQL", "Pandas"],
+      "description": "<p>Internship for final-year students. 2026 batch, minimum 7 CGPA.</p><h3>Requirements</h3><ul><li>Python and Pandas</li><li>SQL</li><li>Excel</li></ul><h3>Good to have</h3><ul><li>Power BI</li><li>Machine Learning</li></ul>"
+    },
+    {
+      "id": 900004,
+      "url": "https://remotive.com/remote-jobs/software-dev/sample-900004",
+      "title": "DevOps Engineer",
+      "company_name": "Umbrella Cloud",
+      "candidate_required_location": "Worldwide",
+      "job_type": "full_time",
+      "tags": ["Docker", "Kubernetes", "AWS"],
+      "description": "<p>Own our CI/CD and cloud infrastructure.</p><h3>Requirements</h3><ul><li>Docker and Kubernetes</li><li>AWS</li><li>Linux and Bash</li><li>CI/CD pipelines</li></ul><h3>Bonus</h3><ul><li>Terraform</li><li>Python</li></ul>"
+    },
+    {
+      "id": 900005,
+      "url": "https://remotive.com/remote-jobs/software-dev/sample-900005",
+      "title": "Full Stack Developer",
+      "company_name": "Hooli",
+      "candidate_required_location": "India",
+      "job_type": "full_time",
+      "tags": ["React", "Node.js", "MongoDB"],
+      "description": "<p>Full stack role on our consumer product.</p><h3>Requirements</h3><ul><li>React and TypeScript</li><li>Node.js and Express.js</li><li>MongoDB</li><li>Git</li></ul><h3>Nice to have</h3><ul><li>Next.js</li><li>Docker</li></ul>"
+    }
+  ]
+}

@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { fetchJobs, applyToJob, type JobData } from "../api/student";
+import { errorMessage } from "../api/match";
+
+/** The API returns `company` on every job (recruiter-posted or ingested); the old JobData type only knows the recruiter path. */
+type PublicJob = JobData & { company?: { name: string } | null };
 
 export const PublicJobsPage: React.FC = () => {
   const { user, accessToken } = useAuth();
   const navigate = useNavigate();
-  const [jobs, setJobs] = useState<JobData[]>([]);
+  const [jobs, setJobs] = useState<PublicJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [applyingId, setApplyingId] = useState<string | null>(null);
@@ -14,7 +18,7 @@ export const PublicJobsPage: React.FC = () => {
 
   useEffect(() => {
     fetchJobs(accessToken || "")
-      .then(setJobs)
+      .then((list) => setJobs(list as PublicJob[]))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [accessToken]);
@@ -30,8 +34,8 @@ export const PublicJobsPage: React.FC = () => {
     try {
       await applyToJob(accessToken, jobId);
       setMessage({ type: "success", text: "Application submitted successfully! Track it in your Dashboard." });
-    } catch (err: any) {
-      setMessage({ type: "error", text: err.message || "Failed to apply." });
+    } catch (err) {
+      setMessage({ type: "error", text: errorMessage(err, "Failed to apply.") });
     } finally {
       setApplyingId(null);
     }
@@ -41,7 +45,7 @@ export const PublicJobsPage: React.FC = () => {
     (j) =>
       j.title.toLowerCase().includes(search.toLowerCase()) ||
       j.description.toLowerCase().includes(search.toLowerCase()) ||
-      (j.recruiterProfile?.company?.name || "").toLowerCase().includes(search.toLowerCase()),
+      (j.company?.name || "").toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -102,7 +106,7 @@ export const PublicJobsPage: React.FC = () => {
                 </div>
 
                 <p className="text-xs font-semibold text-slate-600">
-                  🏢 {job.recruiterProfile?.company?.name || "Campus Hiring Partner"} • 📍 {job.location || "Remote"}
+                  🏢 {job.company?.name || "Campus Hiring Partner"} • 📍 {job.location || "Remote"}
                 </p>
 
                 <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed max-w-2xl">

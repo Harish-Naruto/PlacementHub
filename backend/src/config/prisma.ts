@@ -3,7 +3,7 @@ import { PrismaClient } from "../../generated/prisma/client.js";
 import { PrismaPg } from "@prisma/adapter-pg";
 import config from "./index.ts";
 
-const connectionString = config.databaseUrl || process.env.DIRECT_URL;
+const connectionString = config.databaseUrl;
 
 try {
   const parsed = new URL(connectionString);
@@ -14,7 +14,8 @@ try {
 
 const pool = new pg.Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  // A local development database has no TLS; hosted databases (Supabase) do.
+  ssl: /@(localhost|127\.0\.0\.1)[:/]/.test(connectionString) ? false : { rejectUnauthorized: false },
 });
 
 pool.on("error", (err) => {

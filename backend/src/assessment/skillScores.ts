@@ -73,8 +73,10 @@ export async function buildSkillScores(
   let error: { code: string; message: string } | undefined;
 
   if (runVerification) {
+    const started = Date.now();
     try {
       report = await runVerification();
+      console.info(`[Timing] GitHub verification took ${Date.now() - started}ms (${report.repositories.length} repositories)`);
       state = githubReportState(report);
       updateSession(session.id, { githubReport: report, githubState: state });
     } catch (err) {

@@ -110,13 +110,19 @@ model Company {
   updatedAt   DateTime           @updatedAt @db.Timestamptz(6)
   createdBy   User               @relation("CompanyCreator", fields: [createdById], references: [id])
   recruiters  RecruiterProfile[]
+  jobs        JobPosting[]
 
   @@index([name])
 }
 
 model JobPosting {
   id                  String                      @id @default(uuid()) @db.Uuid
-  recruiterProfileId  String                      @db.Uuid
+  recruiterProfileId  String?                     @db.Uuid
+  companyId           String?                     @db.Uuid
+  origin              JobSourceType               @default(RECRUITER_POSTED)
+  dedupeKey           String?                     @db.VarChar(64)
+  sourceCount         Int                         @default(1)
+  parseMethod         String?                     @db.VarChar(16)
   title               String                      @db.VarChar(200)
   description         String
   location            String?                     @db.VarChar(200)
@@ -131,12 +137,15 @@ model JobPosting {
   applications        Application[]
   eligibleBranches    JobEligibleBranch[]
   graduationYears     JobEligibleGraduationYear[]
-  recruiterProfile    RecruiterProfile            @relation(fields: [recruiterProfileId], references: [id])
+  recruiterProfile    RecruiterProfile?           @relation(fields: [recruiterProfileId], references: [id])
+  company             Company?                    @relation(fields: [companyId], references: [id])
   skillRequirements   JobSkillRequirement[]
   sources             JobSource[]
 
   @@index([status, applicationDeadline])
   @@index([recruiterProfileId, status])
+  @@index([companyId])
+  @@index([dedupeKey])
   @@index([createdAt])
 }
 
@@ -176,6 +185,7 @@ model JobSource {
   sourceType   JobSourceType
   sourceUrl    String?       @db.VarChar(2048)
   externalId   String?       @db.VarChar(255)
+  sourceLabel  String?       @db.VarChar(120)
   fingerprint  String?       @unique @db.VarChar(255)
   importedAt   DateTime      @default(now()) @db.Timestamptz(6)
   jobPosting   JobPosting    @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
@@ -212,6 +222,11 @@ model StudentSkill {
   skillId            String                  @db.Uuid
   declaredLevel      ProficiencyLevel?
   verificationStatus SkillVerificationStatus @default(SELF_DECLARED)
+  assessmentScore    Int?
+  githubScore        Int?
+  combinedScore      Int?
+  evidenceStrength   String?                 @db.VarChar(16)
+  scoredAt           DateTime?               @db.Timestamptz(6)
   createdAt          DateTime                @default(now()) @db.Timestamptz(6)
   updatedAt          DateTime                @updatedAt @db.Timestamptz(6)
   evidence           SkillEvidence[]
@@ -274,6 +289,9 @@ model Application {
   studentProfileId String             @db.Uuid
   jobPostingId     String             @db.Uuid
   resumeUrl        String?            @db.VarChar(2048)
+  fitScore         Int?
+  fitSnapshot      Json?
+  resumeSnapshot   Json?
   status           ApplicationStatus  @default(APPLIED)
   appliedAt        DateTime           @default(now()) @db.Timestamptz(6)
   updatedAt        DateTime           @updatedAt @db.Timestamptz(6)
@@ -305,6 +323,7 @@ model ApplicationEvent {
 enum UserRole {
   STUDENT
   RECRUITER
+  PLACEMENT
 }
 
 enum ProficiencyLevel {
