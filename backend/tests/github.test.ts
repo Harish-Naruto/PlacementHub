@@ -3,6 +3,7 @@ import { clearGithubCache, GithubClient } from '../src/github/client';
 import { assessEvidence, detectTechnology, type RepoFacts } from '../src/github/detect';
 import { parseRepoUrl, parseUsername } from '../src/github/identify';
 import { verifyGithub } from '../src/github/verify';
+import { buildCombinedSkillResults, githubReportState } from '../src/scoring/skillScoring';
 import type { ParsedResume } from '../src/resume/schema';
 
 // ---- fake GitHub -----------------------------------------------------------------------------
@@ -343,5 +344,48 @@ describe('verifyGithub', () => {
     test('organization accounts are rejected', async () => {
         const { p } = run(resume(), { '/users/alice': { json: { login: 'alice', html_url: 'x', type: 'Organization' } } });
         await expect(p).rejects.toMatchObject({ code: 'GITHUB_NOT_A_USER' });
+    });
+});
+
+// ---- scoring on real verifier output ----------------------------------------------------------
+
+describe('per-skill scoring from verifyGithub output', () => {
+    const verify = (r: ParsedResume, routes: Routes) =>
+        verifyGithub({ resume: r, username: 'alice' }, { client: client(fakeGithub(routes).fetch) });
+    const questions = [
+        { skill: 'React', awardedPoints: 8, maxPoints: 10 },
+        { skill: 'Express.js', awardedPoints: 6, maxPoints: 10 },
+        { skill: 'Redis', awardedPoints: 5, maxPoints: 10 },
+        { skill: 'TypeScript', awardedPoints: 9, maxPoints: 10 },
+    ];
+
+    test('supported evidence adds to the combined score; unknown evidence never subtracts', async () => {
+        const report = await verify(resume(), baseRoutes());
+        expect(report.incomplete).toBe(false);
+        const rs = buildCombinedSkillResults({ questions, report, reportState: githubReportState(report) });
+        const by = (s: string) => rs.find((x) => x.skill === s)!;
+
+        // React: assessment 80, GitHub supported (100) -> 84.
+        expect(by('React')).toMatchObject({ assessmentScore: 80, githubEvidenceScore: 100, combinedScore: 84, githubStatus: 'supported', evidenceStrength: 'high' });
+        expect(by('React').evidence.every((e) => e.commitSha === 'abc123' && e.repositoryUrl === 'https://github.com/alice/web-escape')).toBe(true);
+        // Redis: nothing found -> unscored, assessment alone (50), not 40.
+        expect(by('Redis')).toMatchObject({ githubStatus: 'insufficient_evidence', githubEvidenceScore: null, combinedScore: 50 });
+        // TypeScript is in the tree as .tsx files but was not a resume claim: React evidence must not count for it.
+        expect(by('TypeScript').githubEvidenceScore).toBeNull();
+        expect(by('TypeScript').combinedScore).toBe(90);
+        // Repository text never reaches the scored result.
+        expect(JSON.stringify(rs)).not.toContain('IGNORE ALL PREVIOUS');
+    });
+
+    test('a rate-limited run is incomplete and yields no zero scores', async () => {
+        const routes = baseRoutes();
+        routes['/repos/alice/web-escape/languages'] = { status: 429 };
+        const report = await verify(resume(), routes);
+        expect(report.incomplete).toBe(true);
+        const rs = buildCombinedSkillResults({ questions, report, reportState: githubReportState(report) });
+        for (const r of rs.filter((x) => x.assessmentScore !== null)) {
+            expect(r.combinedScore).toBeGreaterThanOrEqual(r.assessmentScore! * 0.8);
+            if (r.githubEvidenceScore === null) expect(r.combinedScore).toBe(r.assessmentScore);
+        }
     });
 });

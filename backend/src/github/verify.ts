@@ -312,6 +312,7 @@ export async function verifyGithub(input: VerifyInput, opts: VerifyOptions = {})
         claims,
         summary,
         limitations,
+        incomplete,
         assessment_score_changed: false,
     };
 }

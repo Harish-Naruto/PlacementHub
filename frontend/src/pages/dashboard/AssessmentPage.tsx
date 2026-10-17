@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { fetchStudentResumes, type ResumeItem } from "../../api/student";
+import { SkillVerificationPanel } from "../../components/SkillVerificationPanel";
 import {
   generateAssessmentApi,
   fetchAssessmentQuestionsApi,
@@ -786,6 +787,9 @@ export const AssessmentPage: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* Skill Verification: assessment + GitHub evidence for every resume skill */}
+        <SkillVerificationPanel token={accessToken} sessionId={scorecard.sessionId || sessionId} />
 
         {/* Detailed Question Review */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
