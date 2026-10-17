@@ -63,7 +63,7 @@ model Institution {
 model StudentProfile {
   id             String         @id @default(uuid()) @db.Uuid
   userId         String         @unique @db.Uuid
-  institutionId  String         @db.Uuid
+  institutionId  String?        @db.Uuid
   branch         String?        @db.VarChar(120)
   degree         String?        @db.VarChar(120)
   graduationYear Int?
@@ -75,7 +75,7 @@ model StudentProfile {
   updatedAt      DateTime       @updatedAt @db.Timestamptz(6)
   applications   Application[]
   projects       Project[]
-  institution    Institution    @relation(fields: [institutionId], references: [id])
+  institution    Institution?   @relation(fields: [institutionId], references: [id])
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills         StudentSkill[]
 
@@ -273,8 +273,8 @@ model Application {
   id               String             @id @default(uuid()) @db.Uuid
   studentProfileId String             @db.Uuid
   jobPostingId     String             @db.Uuid
-  status           ApplicationStatus  @default(APPLIED)
   resumeUrl        String?            @db.VarChar(2048)
+  status           ApplicationStatus  @default(APPLIED)
   appliedAt        DateTime           @default(now()) @db.Timestamptz(6)
   updatedAt        DateTime           @updatedAt @db.Timestamptz(6)
   jobPosting       JobPosting         @relation(fields: [jobPostingId], references: [id])

@@ -197,7 +197,7 @@ export async function login(input: LoginInput) {
 export async function refresh(rawRefreshToken: string) {
   const tokenHashValue = hashToken(rawRefreshToken);
 
-  // Look up the session with its user
+  // Look up session with user
   const session = await prisma.authSession.findUnique({
     where: { tokenHash: tokenHashValue },
     include: { user: true },
@@ -213,17 +213,14 @@ export async function refresh(rawRefreshToken: string) {
       where: { tokenFamily: session.tokenFamily, revokedAt: null },
       data: { revokedAt: new Date() },
     });
-    throw new ApiError(
-      "Refresh token reuse detected — all sessions in this family revoked",
-      401,
-    );
+    throw new ApiError("Refresh token reuse detected — all sessions in this family revoked", 401);
   }
 
   if (session.expiresAt < new Date()) {
     throw new ApiError("Refresh token expired", 401);
   }
 
-  // Revoke old token (fail-closed: even if create below fails, old token is gone)
+  // Revoke old token
   await prisma.authSession.update({
     where: { id: session.id },
     data: { revokedAt: new Date(), lastUsedAt: new Date() },
@@ -245,16 +242,21 @@ export async function refresh(rawRefreshToken: string) {
     },
   });
 
-  const accessToken = await signAccessToken(session.user.id, session.user.role);
+  const result = {
+    user: session.user,
+    rawToken: newRawToken,
+    expiresAt: newExpiresAt,
+  };
+
+  const accessToken = await signAccessToken(result.user.id, result.user.role);
 
   return {
-    user: toSafeUser(session.user),
+    user: toSafeUser(result.user),
     accessToken,
-    refreshToken: newRawToken,
-    refreshExpiresAt: newExpiresAt,
+    refreshToken: result.rawToken,
+    refreshExpiresAt: result.expiresAt,
   };
 }
-
 
 // ---------------------------------------------------------------------------
 // Logout

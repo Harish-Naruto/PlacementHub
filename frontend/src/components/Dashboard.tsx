@@ -2,11 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { testRecruiterCheckApi } from "../api/auth";
 
-interface DashboardProps {
-  onStartAssessment?: () => void;
-}
-
-export const Dashboard: React.FC<DashboardProps> = ({ onStartAssessment }) => {
+export const Dashboard: React.FC = () => {
   const { user, accessToken, logout } = useAuth();
   const [testResult, setTestResult] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<"idle" | "success" | "error">("idle");
@@ -137,29 +133,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onStartAssessment }) => {
           </div>
         )}
       </div>
-      {/* Start Assessment CTA */}
-      {user.role === "STUDENT" && onStartAssessment && (
-        <div className="mt-6 p-5 rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200/60">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">AI Skill Assessment</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Take a personalised technical assessment generated from your resume by Gemini AI.
-              </p>
-            </div>
-            <button
-              id="start-assessment-btn"
-              onClick={onStartAssessment}
-              className="shrink-0 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl shadow-md shadow-violet-500/20 transition-all duration-150 flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Start Assessment
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

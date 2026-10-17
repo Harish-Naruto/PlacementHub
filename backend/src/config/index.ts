@@ -1,5 +1,10 @@
 import dotenv from "dotenv";
-dotenv.config();
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, "../../.env"), override: true });
+dotenv.config({ override: true });
 
 
 
@@ -65,8 +70,6 @@ const config = {
   // Resume parsing (Gemini)
   geminiApiKey: () => required("GEMINI_API_KEY"),
   geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-  // Used when the primary model is overloaded (503/429) instead of retrying it.
-  geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL || "gemini-2.5-flash",
   resumeMaxBytes: 5 * 1024 * 1024,
 
   // GitHub verification (token is optional; use a public-read-only token, server side only)
