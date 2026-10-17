@@ -189,11 +189,21 @@ export const OverviewPage: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100">
                   <span>Level: <strong className="text-slate-600 font-semibold">{s.declaredLevel || "Self-Declared"}</strong></span>
-                  <span className="text-slate-400">
-                    {s.verificationStatus === "EVALUATED" || s.verificationStatus === "VERIFIED"
-                      ? "Assessed"
-                      : "User Mentioned"}
-                  </span>
+                  {s.resumeIds && s.resumeIds.length > 0 ? (
+                    <Link
+                      to={`/dashboard/skills?resumeId=${s.resumeIds[0]}`}
+                      className="px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 font-mono text-[10px] font-semibold border border-blue-200 transition"
+                      title="View in Skills tab for this resume"
+                    >
+                      📄 Resume
+                    </Link>
+                  ) : (
+                    <span className="text-slate-400">
+                      {s.verificationStatus === "EVALUATED" || s.verificationStatus === "VERIFIED"
+                        ? "Assessed"
+                        : "User Mentioned"}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

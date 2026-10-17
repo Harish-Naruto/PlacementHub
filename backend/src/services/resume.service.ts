@@ -71,7 +71,7 @@ export async function saveResume(userId: string, file?: Express.Multer.File) {
           });
         }
 
-        const existing = await prisma.studentSkill.findUnique({
+        let studentSkill = await prisma.studentSkill.findUnique({
           where: {
             studentProfileId_skillId: {
               studentProfileId: profile.id,
@@ -80,8 +80,8 @@ export async function saveResume(userId: string, file?: Express.Multer.File) {
           },
         });
 
-        if (!existing) {
-          await prisma.studentSkill.create({
+        if (!studentSkill) {
+          studentSkill = await prisma.studentSkill.create({
             data: {
               studentProfileId: profile.id,
               skillId: skill.id,
@@ -89,6 +89,29 @@ export async function saveResume(userId: string, file?: Express.Multer.File) {
               verificationStatus: "SELF_DECLARED",
             },
           });
+        }
+
+        // Link skill to this specific resume ID via SkillEvidence
+        try {
+          const evidenceExists = await prisma.skillEvidence.findFirst({
+            where: {
+              studentSkillId: studentSkill.id,
+              sourceUrl: row.id,
+            },
+          });
+          if (!evidenceExists) {
+            await prisma.skillEvidence.create({
+              data: {
+                studentSkillId: studentSkill.id,
+                sourceType: "OTHER",
+                sourceUrl: row.id,
+                description: `Extracted from resume: ${file.originalname || "Resume"} (ID: ${row.id})`,
+                status: "OBSERVED",
+              },
+            });
+          }
+        } catch {
+          // non-fatal evidence logging
         }
       }
     }
@@ -109,7 +132,7 @@ export async function saveResume(userId: string, file?: Express.Multer.File) {
 export const parseAndSaveResume = saveResume;
 
 // ---------------------------------------------------------------------------
-// List student's parsed resumes
+// List student's parsed resumes with their specific skills
 // ---------------------------------------------------------------------------
 export async function listResumes(userId: string) {
   const rows = await prisma.parsedResume.findMany({
@@ -117,12 +140,23 @@ export async function listResumes(userId: string) {
     orderBy: { createdAt: "desc" },
   });
 
-  return rows.map((row) => ({
-    id: row.id,
-    schemaVersion: row.schemaVersion,
-    resume: row.data,
-    createdAt: row.createdAt,
-  }));
+  return rows.map((row) => {
+    const data = row.data as any;
+    const skills = (data?.skills || []).map((s: any) => ({
+      name: s.canonical_name || s.name,
+      category: s.category || "Technology",
+      claimType: s.claim_type,
+    }));
+
+    return {
+      id: row.id,
+      schemaVersion: row.schemaVersion,
+      resume: row.data,
+      skills,
+      skillCount: skills.length,
+      createdAt: row.createdAt,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------

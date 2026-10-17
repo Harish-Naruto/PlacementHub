@@ -65,11 +65,24 @@ export interface StudentSkill {
   skillId: string;
   declaredLevel: string | null;
   verificationStatus: string;
+  verificationLabel?: string;
+  resumeIds?: string[];
+  resumes?: Array<{ id: string; name: string; createdAt: string }>;
+  primaryResumeId?: string | null;
   skill: {
     id: string;
     name: string;
     category?: string | null;
   };
+}
+
+export interface ResumeItem {
+  id: string;
+  schemaVersion: string;
+  resume: any;
+  skills?: Array<{ name: string; category?: string; claimType?: string }>;
+  skillCount?: number;
+  createdAt: string;
 }
 
 export interface ProjectData {
@@ -158,8 +171,18 @@ export async function uploadResumeApi(
   return res;
 }
 
-export async function fetchStudentSkills(token: string): Promise<StudentSkill[]> {
-  const res = await request<{ error: boolean; data: StudentSkill[] }>("/students/me/skills", token);
+export async function fetchStudentResumes(token: string): Promise<ResumeItem[]> {
+  const res = await request<{ error: boolean; data: ResumeItem[] }>("/students/me/resumes", token);
+  return res.data || [];
+}
+
+export async function deleteStudentResumeApi(token: string, resumeId: string): Promise<void> {
+  await request(`/students/me/resumes/${resumeId}`, token, { method: "DELETE" });
+}
+
+export async function fetchStudentSkills(token: string, resumeId?: string): Promise<StudentSkill[]> {
+  const url = resumeId ? `/students/me/skills?resumeId=${encodeURIComponent(resumeId)}` : "/students/me/skills";
+  const res = await request<{ error: boolean; data: StudentSkill[] }>(url, token);
   return res.data;
 }
 

@@ -3,6 +3,7 @@ import authRoutes from "./auth.routes.ts";
 import studentRoutes from "./student.routes.ts";
 import jobRoutes from "./job.routes.ts";
 import institutionRoutes from "./institution.routes.ts";
+import assessmentRoutes from "../assessment/routes.ts";
 
 export default function routes() {
   const router = Router();
@@ -15,6 +16,7 @@ export default function routes() {
   router.use("/students", studentRoutes);
   router.use("/jobs", jobRoutes);
   router.use("/institutions", institutionRoutes);
+  router.use("/assessments", assessmentRoutes);
 
   return router;
 }

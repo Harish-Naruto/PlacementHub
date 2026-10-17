@@ -58,32 +58,81 @@ export async function getCatalogSkills() {
 }
 
 // ---------------------------------------------------------------------------
-// Get student skills with friendly status labels
+// Get student skills with friendly status labels and resume associations
 // ---------------------------------------------------------------------------
-export async function getStudentSkills(userId: string) {
+export async function getStudentSkills(userId: string, resumeId?: string) {
   const profile = await prisma.studentProfile.findUnique({ where: { userId } });
   if (!profile) return [];
 
+  // Fetch all parsed resumes for this user to map skills to their source resumes
+  const userResumes = await prisma.parsedResume.findMany({
+    where: { userId },
+    select: { id: true, data: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const resumeMap = new Map<string, { id: string; name: string; createdAt: Date; skills: Set<string> }>();
+  for (const r of userResumes) {
+    const data = r.data as any;
+    const skillsInResume = new Set<string>();
+    for (const s of data?.skills || []) {
+      const name = (s.canonical_name || s.name || "").trim().toLowerCase();
+      if (name) skillsInResume.add(name);
+    }
+    resumeMap.set(r.id, {
+      id: r.id,
+      name: `Resume (${new Date(r.createdAt).toLocaleDateString()})`,
+      createdAt: r.createdAt,
+      skills: skillsInResume,
+    });
+  }
+
   const skills = await prisma.studentSkill.findMany({
     where: { studentProfileId: profile.id },
-    include: { skill: true },
+    include: { skill: true, evidence: true },
     orderBy: { createdAt: "asc" },
   });
 
-  return skills.map((s) => ({
-    id: s.id,
-    skillId: s.skillId,
-    skillName: s.skill.name,
-    skill: {
-      id: s.skill.id,
-      name: s.skill.name,
-      category: s.skill.category,
-    },
-    declaredLevel: s.declaredLevel,
-    verificationStatus: s.verificationStatus,
-    verificationLabel: mapVerificationStatus(s.verificationStatus),
-    createdAt: s.createdAt,
-  }));
+  const formatted = skills.map((s) => {
+    const normalizedName = s.skill.name.toLowerCase();
+
+    // Collect resume IDs from SkillEvidence
+    const evidenceResumeIds = s.evidence
+      .filter((e) => e.sourceType === "OTHER" && e.sourceUrl && resumeMap.has(e.sourceUrl))
+      .map((e) => e.sourceUrl!);
+
+    // Also check content match against user's parsed resumes
+    const matchedResumes: Array<{ id: string; name: string; createdAt: Date }> = [];
+    for (const [rId, rMeta] of resumeMap.entries()) {
+      if (rMeta.skills.has(normalizedName) || evidenceResumeIds.includes(rId)) {
+        matchedResumes.push({ id: rId, name: rMeta.name, createdAt: rMeta.createdAt });
+      }
+    }
+
+    return {
+      id: s.id,
+      skillId: s.skillId,
+      skillName: s.skill.name,
+      skill: {
+        id: s.skill.id,
+        name: s.skill.name,
+        category: s.skill.category,
+      },
+      declaredLevel: s.declaredLevel,
+      verificationStatus: s.verificationStatus,
+      verificationLabel: mapVerificationStatus(s.verificationStatus),
+      resumeIds: matchedResumes.map((r) => r.id),
+      resumes: matchedResumes,
+      primaryResumeId: matchedResumes[0]?.id || null,
+      createdAt: s.createdAt,
+    };
+  });
+
+  if (resumeId) {
+    return formatted.filter((s) => s.resumeIds.includes(resumeId));
+  }
+
+  return formatted;
 }
 
 // ---------------------------------------------------------------------------

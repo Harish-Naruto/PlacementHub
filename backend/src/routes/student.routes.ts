@@ -106,7 +106,8 @@ router.delete("/me/resumes/:id", async (req: Request, res: Response, next: NextF
 // ---------------------------------------------------------------------------
 router.get("/me/skills", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const skills = await skillService.getStudentSkills(req.user!.id);
+    const resumeId = req.query.resumeId as string | undefined;
+    const skills = await skillService.getStudentSkills(req.user!.id, resumeId);
     res.status(200).json({ error: false, data: skills });
   } catch (err) {
     next(err);

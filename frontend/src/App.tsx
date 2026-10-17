@@ -16,6 +16,7 @@ import { OverviewPage } from "./pages/dashboard/OverviewPage";
 import { ProfilePage } from "./pages/dashboard/ProfilePage";
 import { ResumePage } from "./pages/dashboard/ResumePage";
 import { SkillsPage } from "./pages/dashboard/SkillsPage";
+import { AssessmentPage } from "./pages/dashboard/AssessmentPage";
 import { ProjectsPage } from "./pages/dashboard/ProjectsPage";
 import { JobsPage } from "./pages/dashboard/JobsPage";
 import { ApplicationsPage } from "./pages/dashboard/ApplicationsPage";
@@ -49,6 +50,7 @@ export function App() {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="resume" element={<ResumePage />} />
             <Route path="skills" element={<SkillsPage />} />
+            <Route path="assessment" element={<AssessmentPage />} />
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="jobs" element={<JobsPage />} />
             <Route path="applications" element={<ApplicationsPage />} />
