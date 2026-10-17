@@ -1,6 +1,7 @@
 import { Router } from "express";
 import authRoutes from "./auth.routes.ts";
 import studentRoutes from "./student.routes.ts";
+import recruiterRoutes from "./recruiter.routes.ts";
 import jobRoutes from "./job.routes.ts";
 import institutionRoutes from "./institution.routes.ts";
 import assessmentRoutes from "../assessment/routes.ts";
@@ -14,6 +15,7 @@ export default function routes() {
 
   router.use("/auth", authRoutes);
   router.use("/students", studentRoutes);
+  router.use("/recruiters", recruiterRoutes);
   router.use("/jobs", jobRoutes);
   router.use("/institutions", institutionRoutes);
   router.use("/assessments", assessmentRoutes);

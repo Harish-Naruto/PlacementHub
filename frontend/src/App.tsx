@@ -21,6 +21,23 @@ import { ProjectsPage } from "./pages/dashboard/ProjectsPage";
 import { JobsPage } from "./pages/dashboard/JobsPage";
 import { ApplicationsPage } from "./pages/dashboard/ApplicationsPage";
 
+import { useAuth } from "./context/AuthContext";
+
+// Recruiter Pages
+import { RecruiterOverviewPage } from "./pages/recruiter/RecruiterOverviewPage";
+import { RecruiterJobsPage } from "./pages/recruiter/RecruiterJobsPage";
+import { PostJobPage } from "./pages/recruiter/PostJobPage";
+import { JobApplicantsPage } from "./pages/recruiter/JobApplicantsPage";
+import { CompanyProfilePage } from "./pages/recruiter/CompanyProfilePage";
+
+function DashboardIndex() {
+  const { user } = useAuth();
+  if (user?.role === "RECRUITER") {
+    return <RecruiterOverviewPage />;
+  }
+  return <OverviewPage />;
+}
+
 export function App() {
   return (
     <BrowserRouter>
@@ -46,7 +63,10 @@ export function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<OverviewPage />} />
+            {/* Role-adaptive index */}
+            <Route index element={<DashboardIndex />} />
+
+            {/* Student Hub Routes */}
             <Route path="profile" element={<ProfilePage />} />
             <Route path="resume" element={<ResumePage />} />
             <Route path="skills" element={<SkillsPage />} />
@@ -54,6 +74,12 @@ export function App() {
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="jobs" element={<JobsPage />} />
             <Route path="applications" element={<ApplicationsPage />} />
+
+            {/* Recruiter Hub Routes */}
+            <Route path="recruiter/jobs" element={<RecruiterJobsPage />} />
+            <Route path="recruiter/jobs/new" element={<PostJobPage />} />
+            <Route path="recruiter/jobs/:jobId/applicants" element={<JobApplicantsPage />} />
+            <Route path="recruiter/company" element={<CompanyProfilePage />} />
           </Route>
 
           {/* Fallback */}

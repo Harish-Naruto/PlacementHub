@@ -12,7 +12,9 @@ export const DashboardLayout: React.FC = () => {
     navigate("/");
   };
 
-  const navItems = [
+  const isRecruiter = user?.role === "RECRUITER";
+
+  const studentNavItems = [
     {
       to: "/dashboard",
       end: true,
@@ -88,15 +90,57 @@ export const DashboardLayout: React.FC = () => {
     },
   ];
 
+  const recruiterNavItems = [
+    {
+      to: "/dashboard",
+      end: true,
+      label: "Overview",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+      ),
+    },
+    {
+      to: "/dashboard/recruiter/jobs/new",
+      label: "Post a Job",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      ),
+    },
+    {
+      to: "/dashboard/recruiter/jobs",
+      label: "Manage Jobs",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
+      to: "/dashboard/recruiter/company",
+      label: "Company Profile",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
+    },
+  ];
+
+  const navItems = isRecruiter ? recruiterNavItems : studentNavItems;
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-800">
       {/* Mobile Top Header */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold ${isRecruiter ? "bg-purple-600" : "bg-blue-600"}`}>
             P
           </div>
-          <span className="font-bold text-slate-900">Placement<span className="text-blue-600">Hub</span></span>
+          <span className="font-bold text-slate-900">Placement<span className={isRecruiter ? "text-purple-600" : "text-blue-600"}>Hub</span></span>
         </Link>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -119,12 +163,12 @@ export const DashboardLayout: React.FC = () => {
             {/* Logo */}
             <div className="flex items-center justify-between pb-6 px-2 border-b border-slate-100">
               <Link to="/" className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/25">
+                <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${isRecruiter ? "from-purple-600 to-indigo-600 shadow-purple-500/25" : "from-blue-600 to-indigo-600 shadow-blue-500/25"} flex items-center justify-center text-white shadow-md`}>
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <span className="text-lg font-bold tracking-tight text-slate-900">Placement<span className="text-blue-600">Hub</span></span>
+                <span className="text-lg font-bold tracking-tight text-slate-900">Placement<span className={isRecruiter ? "text-purple-600" : "text-blue-600"}>Hub</span></span>
               </Link>
               <button onClick={() => setSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-slate-600">
                 ✕
@@ -133,13 +177,13 @@ export const DashboardLayout: React.FC = () => {
 
             {/* User Quick Info */}
             <div className="my-5 p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+              <div className={`w-10 h-10 rounded-xl text-white flex items-center justify-center font-bold text-sm shadow-sm ${isRecruiter ? "bg-purple-600" : "bg-blue-600"}`}>
                 {user?.name ? user.name[0].toUpperCase() : user?.email[0].toUpperCase()}
               </div>
               <div className="overflow-hidden">
-                <h4 className="text-xs font-bold text-slate-900 truncate">{user?.name || "Student"}</h4>
+                <h4 className="text-xs font-bold text-slate-900 truncate">{user?.name || (isRecruiter ? "Recruiter" : "Student")}</h4>
                 <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
-                <span className="inline-block mt-0.5 px-2 py-0.2 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700">
+                <span className={`inline-block mt-0.5 px-2 py-0.2 text-[10px] font-bold rounded-full ${isRecruiter ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
                   {user?.role}
                 </span>
               </div>
@@ -156,7 +200,9 @@ export const DashboardLayout: React.FC = () => {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                       isActive
-                        ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                        ? isRecruiter
+                          ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
+                          : "bg-blue-600 text-white shadow-md shadow-blue-500/20"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                     }`
                   }
@@ -198,7 +244,7 @@ export const DashboardLayout: React.FC = () => {
         {/* Top Header Bar */}
         <header className="hidden md:flex items-center justify-between h-16 px-8 bg-white/70 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30">
           <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-            <span>Student Hub</span>
+            <span>{isRecruiter ? "Recruiter Hub" : "Student Hub"}</span>
             <span>/</span>
             <span className="text-slate-900 font-bold capitalize">Dashboard</span>
           </div>
@@ -206,7 +252,7 @@ export const DashboardLayout: React.FC = () => {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Authenticated</span>
+              <span>{isRecruiter ? "Recruiter Active" : "Authenticated"}</span>
             </div>
             <button
               onClick={handleLogout}
