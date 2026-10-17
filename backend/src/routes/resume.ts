@@ -1,8 +1,11 @@
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
 import config from '../config/index.ts';
 import prisma from '../config/prisma.ts';
 import { authenticate } from '../middleware/authenticate.ts';
+import { verifyGithub } from '../github/verify.ts';
 import { extractText } from '../resume/extractText.ts';
 import { parseResume } from '../resume/parseResume.ts';
 import type { ParsedResume } from '../resume/schema.ts';
@@ -30,6 +33,18 @@ const handleUpload = (req: Request, res: Response, next: NextFunction) =>
         );
     });
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Owner or recruiter only; everything else looks like "not found".
+async function loadAccessibleResume(req: Request) {
+    const id = req.params.id as string;
+    const row = UUID.test(id) ? await prisma.parsedResume.findUnique({ where: { id } }) : null;
+    if (!row || (row.userId !== req.user!.id && req.user!.role !== 'RECRUITER')) {
+        throw new ApiError('Resume not found', 404, true, 'NOT_FOUND');
+    }
+    return row;
+}
+
 const router = Router();
 router.use(authenticate);
 
@@ -54,6 +69,16 @@ router.post('/', handleUpload, async (req, res, next) => {
     }
 });
 
+// GET /api/v1/resumes/:id  (owner or recruiter)
+router.get('/:id', async (req, res, next) => {
+    try {
+        const row = await loadAccessibleResume(req);
+        res.json({ error: false, data: { id: row.id, resume: row.data, createdAt: row.createdAt } });
+    } catch (e) {
+        next(e);
+    }
+});
+
 // GET /api/v1/resumes  (the caller's own parsed resumes, newest first)
 router.get('/', async (req, res, next) => {
     try {
@@ -66,6 +91,40 @@ router.get('/', async (req, res, next) => {
             error: false,
             data: rows.map((r) => ({ id: r.id, resume: r.data, createdAt: r.createdAt })),
         });
+    } catch (e) {
+        next(e);
+    }
+});
+
+// Each run makes many GitHub API calls, so it gets its own, tighter limit (per user).
+const githubLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    limit: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => req.user?.id ?? 'anonymous',
+    validate: { keyGeneratorIpFallback: false },
+    message: { error: true, message: 'Too many GitHub verifications; please wait and try again', code: 'RATE_LIMITED' },
+});
+
+const githubBody = z.object({ githubUsername: z.string().trim().min(1).max(200).optional() });
+
+// POST /api/v1/resumes/:id/github-verification  (owner or recruiter)
+// Body (optional): { "githubUsername": "octocat" | "https://github.com/octocat" }
+// Secondary evidence only: returns a report and never touches assessment scores.
+router.post('/:id/github-verification', githubLimiter, async (req, res, next) => {
+    try {
+        const row = await loadAccessibleResume(req);
+        const body = githubBody.safeParse(req.body ?? {});
+        if (!body.success) throw new ApiError('Invalid request body', 400, true, 'INVALID_BODY');
+
+        const profile = await prisma.studentProfile.findUnique({ where: { userId: row.userId }, select: { githubUsername: true } });
+        const report = await verifyGithub({
+            resume: row.data as unknown as ParsedResume,
+            username: body.data.githubUsername,
+            profileUsername: profile?.githubUsername,
+        });
+        res.json({ error: false, data: report });
     } catch (e) {
         next(e);
     }
