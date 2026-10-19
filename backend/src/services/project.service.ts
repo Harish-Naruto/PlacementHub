@@ -1,22 +1,10 @@
 import prisma from "../config/prisma.ts";
 import { ApiError } from "../utils/apiError.ts";
 import type { CreateProjectInput, UpdateProjectInput } from "../validators/student.validator.ts";
+import { resolveOrCreateSkill as resolveSkill } from "./skill.service.ts";
 
-// Resolve or create skill by name (for project tech stack)
-async function resolveOrCreateSkill(name: string) {
-  let skill = await prisma.skill.findFirst({
-    where: { name: { equals: name, mode: "insensitive" } },
-  });
-  if (skill) return skill;
-
-  const alias = await prisma.skillAlias.findFirst({
-    where: { alias: { equals: name, mode: "insensitive" } },
-    include: { skill: true },
-  });
-  if (alias) return alias.skill;
-
-  return prisma.skill.create({ data: { name: name.trim() } });
-}
+// Project tech stacks use the same skill resolution as everything else (taxonomy aware).
+const resolveOrCreateSkill = resolveSkill;
 
 // ---------------------------------------------------------------------------
 // List own projects

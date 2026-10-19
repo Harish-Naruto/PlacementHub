@@ -1,19 +1,14 @@
 # Project Context: call-of-code ("PlacementHub")
 
-Snapshot of what already exists in this repo (branch `scoring_workflow`, based on commit `68ee43b`, the merge of PR #12 "StudenProfile" / "Intigrate end to end feature", plus the uncommitted per-skill scoring work). Use it to orient quickly before adding features.
+Snapshot of what exists in this repo (branch `scoring_workflow`). It now covers the whole brief: evidence-based skills, multi-source job ingestion with dedupe, fit scoring with gaps, a truthful resume builder, an application pipeline, a recruiter portal and a placement-team portal. Use it to orient quickly before adding features. The plan that produced this work is in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 ## What the product is
 
-A campus-placement platform ("PlacementHub", backend package name `kurukshetra-backend`) built for a 24-hour hackathon. Two roles exist, `STUDENT` and `RECRUITER`, but **only the student side is built**. A student can:
+A campus-placement platform ("PlacementHub", backend package name `kurukshetra-backend`) built for a 24-hour hackathon. Three roles exist: `STUDENT`, `RECRUITER` and `PLACEMENT` (the placement team).
 
-1. Register and sign in.
-2. Fill in a profile (institution, branch, CGPA, GitHub, LinkedIn).
-3. Upload a PDF/DOCX resume, which Gemini parses into structured skills, projects and experience, and which auto-fills their skill list.
-4. Manage skills and portfolio projects.
-5. Take an AI-generated skill assessment based on the resume and get a scorecard.
-6. Browse job postings and apply or withdraw.
-
-There is also a backend-only GitHub-verification module, and a **per-skill scoring** layer that combines each skill's assessment score with its GitHub evidence (see "Per-skill scoring"). Recruiter features (posting jobs, reviewing applicants) are not built.
+- **Student:** registers, fills in a profile, uploads a resume (Gemini parses it), takes an AI assessment, verifies GitHub, sees each opening with an evidence-backed **fit score, plain-language explanation and gaps**, builds a **tailored one-page resume where every line traces to evidence**, checks the claims in an uploaded resume, applies, and tracks the application on a pipeline.
+- **Recruiter:** sets up a company, posts openings (paste a job description and it is parsed), publishes them, sees a **ranked, evidence-backed shortlist** of applicants with proof behind every skill, and moves applications through the pipeline.
+- **Placement team:** ingests openings from partner postings, alumni referrals and a job API (the same opening arriving twice becomes one job with several sources), **ranks a whole batch against one pasted job description**, and runs the shared pipeline board.
 
 ## Project brief (the requirement this repo is building toward)
 
@@ -30,12 +25,12 @@ Sponsored by TechSummitTrainers. Freshers send one generic resume full of claims
 
 | Requirement | State |
 |---|---|
-| 1. Openings: multi-source ingestion, deduplication, skill parsing | **Not built.** Only the schema (`JobPosting`, `JobSource` with a `fingerprint`, `JobSkillRequirement` required or preferred). No ingestion, no job creation, and skill normalisation is a tiny alias table. |
-| 2. Evidence-based skill profile | **Partly built.** Assessment (AI quiz), GitHub verification and the per-skill verification verdict exist and link each skill to its proof (question ids, commit-pinned file URLs). The verdicts are **saved to `StudentSkill.verificationStatus` and `SkillEvidence`** (see "Persistence"). Projects can be created but are **not evaluated**. |
-| 3. Matching with a fit score and gaps | **Not built.** |
-| 4. Tailored truthful resume; flag unsupported claims | **Partly built.** The skill verification flags unsupported skills on the resume (`unsupported`, `unverified`, `needs_review`). Not covered: claims about projects, features, experience or dates, and resume generation. |
-| 5. Pipeline and batch ranking | **Partly built.** `Application` and `ApplicationEvent` exist, and students can apply, withdraw and view applications. No placement-team or recruiter side, no status changes, no batch ranking. |
-| 6. Optional recruiter portal, alumni, interview bank | **Not built.** |
+| 1. Openings: multi-source ingestion, deduplication, skill parsing | **Built.** Partner paste, alumni referral and the Remotive API (with offline fixtures) go through one `ingestJob`. Skills are normalised through a shared taxonomy; exact and fuzzy dedupe merge repeats into one job with several `JobSource` rows. |
+| 2. Evidence-based skill profile | **Built.** Assessment, GitHub verification and per-skill verdicts, now with the numeric scores stored on `StudentSkill`. Every skill links to its proof. Projects are **not** separately evaluated (project technologies are checked through the skills). |
+| 3. Matching with a fit score and gaps | **Built.** `matching/fit.ts`: score, band, plain-language explanation, typed gaps with next actions, and eligibility flags kept separate from the score. |
+| 4. Tailored truthful resume; flag unsupported claims | **Built.** `resumeBuilder/`: bullets are templates over evidence-backed facts, unsupported skills and claims are blocked with the reason and a fix, one-page budget, HTML output. `claimCheck.ts` flags unsupported skills, project technologies, features, metrics and impossible dates in an uploaded resume. |
+| 5. Pipeline and batch ranking | **Built.** Validated status transitions with a logged history, a placement board, and `POST /placement/rank` for a whole batch. |
+| 6. Optional recruiter portal, alumni, interview bank | **Recruiter portal built** (own company, jobs, ranked shortlist, status changes). Alumni mapping and the interview-question bank are **not built**. |
 
 ## Repo layout
 
@@ -57,7 +52,8 @@ Package manager is **Bun** (`bun.lock` in the root, backend and frontend). The r
 - Frontend: `bun run dev | build | lint | preview`. The frontend reads `VITE_API_BASE_URL` (default `http://localhost:4000/api/v1`) in `api/student.ts` and `api/assessment.ts`; `api/auth.ts` still hard-codes the URL.
 - Database: `prisma7.config.ts` is the Prisma CLI config. `backend/prisma/apply-schema.mjs` (`bun run prisma/apply-schema.mjs`) applies schema changes directly to the remote Supabase DB using `DATABASE_URL` read from `backend/.env`.
 - Required backend env vars (config throws at startup if missing): `DATABASE_URL`, `JWT_ACCESS_SECRET` (at least 32 chars), `RECRUITER_SIGNUP_CODE`. `GEMINI_API_KEY` is required lazily on the first Gemini call.
-- Optional env vars: `PORT`, `FRONTEND_URL` (also the CORS origin, default `http://localhost:5173`), `DIRECT_URL`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_ACCESS_TTL` (15m), `REFRESH_TOKEN_TTL_DAYS` (7), `RATE_LIMIT_*`, `GEMINI_MODEL` (default `gemini-2.5-flash`), `MAX_RESUME_SIZE_BYTES`, and the `GITHUB_*` settings listed under "GitHub verification".
+- Placement MVP env vars: `PLACEMENT_SIGNUP_CODE` (optional), `INGEST_USE_FIXTURES`, `JOB_PARSE_LLM`. After pulling this work: apply `prisma/migrations/20261017120000_placement_mvp/migration.sql` (see "Database") and optionally run `bun run prisma/seed.ts` for demo data.
+- Optional env vars: `PORT`, `FRONTEND_URL` (the CORS origin(s): comma separated, trailing slashes ignored, default `http://localhost:5173`; in development any localhost / 127.0.0.1 port is also allowed, see `utils/cors.ts`), `DIRECT_URL`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_ACCESS_TTL` (15m), `REFRESH_TOKEN_TTL_DAYS` (7), `RATE_LIMIT_*`, `GEMINI_MODEL` (default `gemini-2.5-flash`), `MAX_RESUME_SIZE_BYTES`, and the `GITHUB_*` settings listed under "GitHub verification".
 - `config/index.ts` loads `backend/.env` with `override: true`, so values in the file win over shell env vars.
 
 ## Backend (`backend/src`)
@@ -71,7 +67,7 @@ Package manager is **Bun** (`bun.lock` in the root, backend and frontend). The r
 
 ### Routes (all mounted under `/api/v1`, see [routes/index.ts](backend/src/routes/index.ts))
 
-Mounted: `/auth`, `/students`, `/jobs`, `/institutions`, `/assessments`, plus `/ping` and `/health`.
+Mounted: `/auth`, `/students`, `/jobs`, `/institutions`, `/assessments`, `/placement`, `/recruiter`, plus `/ping` and `/health`. The new endpoints are listed under "Placement MVP" below.
 
 | Route | Auth | Purpose |
 |---|---|---|
@@ -195,7 +191,7 @@ Implements `backend/per-skill-github-assessment-scoring-implementation.md`. Each
 #### Persistence ([scoring/skillPersistence.ts](backend/src/scoring/skillPersistence.ts), [services/skillEvidence.service.ts](backend/src/services/skillEvidence.service.ts))
 Scored skills are written to the student's skill profile, so matching and recruiter views can read them later.
 
-- **When:** (1) right after an assessment is graded (`POST /assessments/:id/submit`), with assessment-only scores, and (2) on every `POST /assessments/:id/skill-scores`, with the GitHub evidence. A failed save is logged and never fails the request; the POST response carries a `persistence` summary (`skills`, `evidenceCreated`, `evidenceUpdated`, `statusesChanged`, `failed`, or `{ error }`). `GET .../skill-scores` writes nothing.
+- **When:** (1) right after an assessment is graded (`POST /assessments/:id/submit`), with assessment-only scores, and (2) on every `POST /assessments/:id/skill-scores`, with the GitHub evidence. The save after grading runs **in the background** (the scorecard response does not wait for it); the POST waits for it so it can report the result. Skills are written 6 at a time (`PERSIST_CONCURRENCY`), and a skill's evidence rows in parallel, because each skill is several round-trips to a remote database. A failed save is logged and never fails the request; the POST response carries a `persistence` summary (`skills`, `evidenceCreated`, `evidenceUpdated`, `statusesChanged`, `failed`, or `{ error }`). `GET .../skill-scores` writes nothing.
 - **`StudentSkill.verificationStatus`:**
 
   | Verdict | Saved status |
@@ -215,16 +211,59 @@ Scored skills are written to the student's skill profile, so matching and recrui
 - **Reading it back:** `GET /students/me/skills` now returns a `proof` array per skill (the assessment and GitHub rows). The Skills page does not display it yet.
 - Design: `planSkillPersistence` (pure) builds the rows, and `applySkillPlan` applies them through a small `SkillEvidenceRepo` interface (Prisma in production, an in-memory fake in tests). One failing skill does not stop the others.
 
-### Database ([prisma/schema.prisma](backend/prisma/schema.prisma))
-Two migrations exist (`init` and `add_parsed_resume`). The latest merge changed `StudentProfile.institutionId` to optional and moved `Application.status`, but added no migration file. Changes are applied with `apply-schema.mjs`.
+### Placement MVP (skills, openings, matching, resume builder, pipeline, portals)
 
-- **Used by code today:**
-  - Users and sessions: `User` (role `STUDENT` or `RECRUITER`), `AuthSession`.
-  - Resumes and profiles: `ParsedResume` (`data` is JSON of the parsed resume, with `schemaVersion`), `StudentProfile`, `Institution`.
-  - Skills and projects: `Skill`, `SkillAlias`, `StudentSkill`, `SkillEvidence`, `Project`, `ProjectSkill`.
-  - Jobs and applications (read and apply only): `JobPosting`, `Company`, `RecruiterProfile`, `JobSkillRequirement`, `JobEligibleBranch`, `JobEligibleGraduationYear`, `Application`, `ApplicationEvent`.
-- **Schema only:** `JobSource`. Nothing in the app creates jobs or companies, so the job board is empty until rows are inserted manually. There is no seed script.
-- **Enum values now set:** `SkillVerificationStatus` `EVALUATED`, `REPOSITORY_OBSERVED` and `NEEDS_REVIEW` are written by skill verification. `EvidenceSourceType` `ASSESSMENT` and `GITHUB_REPOSITORY` are used too; `PROJECT` and `CERTIFICATE` are still unused. The assessment scorecard itself (questions and answers) is still not stored in the DB; only the per-skill proof is.
+Pure logic lives in dedicated folders (no database, network or LLM, all unit tested); services own the Prisma calls; routes are thin. New routes use Express 5 async handlers without try/catch and `validate(schema, data)` from [utils/params.ts](backend/src/utils/params.ts), which throws a 400 with every message.
+
+- **Skill taxonomy** ([skills/](backend/src/skills)): `taxonomy.ts` is the one vocabulary (about 110 skills; `aliases` are safe to scan for in free text, `lookupOnly` aliases such as "Go" or "Express" only match a whole name). `canonical.ts` has `canonicalSkill(name)` ("ReactJS", "React.js", "React" give React; Java and JavaScript stay distinct) and `findSkillMentions(text)` (longest name wins, "Chart.js" is not JavaScript). `resume/normalize.ts#canonicalize`, `scoring/skillScoring.ts#skillKey`, the GitHub catalog lookup and `skill.service#resolveOrCreateSkill` all use it.
+- **Openings** ([jobs/](backend/src/jobs), [services/ingest.service.ts](backend/src/services/ingest.service.ts)):
+  - `parseJob.ts`: `parseJobRules` (always available: required vs preferred sections and phrases, CGPA, batch years, branches, deadline, work mode, type, title and company guesses) and `parseJob` (Gemini first when `GEMINI_API_KEY` is set and `JOB_PARSE_LLM` is not `false`, rules on any failure; `parseMethod` records which ran).
+  - `dedupe.ts`: `dedupeKey` = sha1 of normalised company, title tokens (developer = engineer, skill aliases canonicalised) and city. A match is **exact** (same key) or **fuzzy** (same normalised company, `0.6 * title Jaccard + 0.4 * skill overlap` of the shorter list, at least 80, never across two different real cities; a remote listing fits any city). A merge adds a `JobSource` (unless the same labelled partner already sent it), bumps `sourceCount` and unions skills (required beats preferred).
+  - `ingestJob` resolves the company by normalised name, ignores an identical re-import (`JobSource.fingerprint`), and publishes immediately unless no skills were found (then a draft). `ingestFromApi("remotive")` reads `fixtures/jobs/remotive.json` when `INGEST_USE_FIXTURES=true` or the network fails.
+- **Matching** ([matching/fit.ts](backend/src/matching/fit.ts), [rank.ts](backend/src/matching/rank.ts), [branches.ts](backend/src/matching/branches.ts), [services/match.service.ts](backend/src/services/match.service.ts)): skill credit is the stored combined score / 100; GitHub-only evidence is capped at 0.5; self-declared or missing is 0. `fit = round(100 * sum(weight * credit) / sum(weight))` with weight = requirement weight x (REQUIRED 1.0, PREFERRED 0.25). Bands: Strong 70, Good 50, Partial 30, Low. A job with no skills has a `null` fit. Gaps are typed (`missing`, `claimed_only`, `weak`, `observed_only`) with a next action; the explanation is a template over the result so it cannot name a skill that is not in the inputs. Eligibility (CGPA, branch via aliases, batch, deadline) is reported as flags and never changes the score; missing profile data is "unknown", not a failure. Ranking: eligible first, then fit, required skills demonstrated, CGPA, name.
+- **Resume builder** ([resumeBuilder/build.ts](backend/src/resumeBuilder/build.ts), [claimCheck.ts](backend/src/resumeBuilder/claimCheck.ts), [services/resumeBuilder.service.ts](backend/src/services/resumeBuilder.service.ts)): tiers are *verified* (evidence), *self-reported* (education, descriptions the student attests; still checked) and *blocked*. A skill is usable when its stored status is `EVALUATED` or `REPOSITORY_OBSERVED`. Project bullets list only verified technologies; a project with none is blocked. A free-text line that names an unverified skill, or states a number that cannot be verified (percentages, "10k users", "team of 10"), is blocked. Output: skills ordered by job relevance, up to 3 projects and 2 roles, a 48-line budget that drops the least relevant bullets first (recorded in the ledger), every bullet with `factIds` and `proof`, plus a standalone single-column HTML page. No LLM is involved, so output is deterministic.
+- **Pipeline** ([pipeline/transitions.ts](backend/src/pipeline/transitions.ts), [services/pipeline.service.ts](backend/src/services/pipeline.service.ts)): `APPLIED, IN_REVIEW, SHORTLISTED, INTERVIEW_SCHEDULED, INTERVIEWING, OFFERED, HIRED` forward (skipping allowed, HIRED only after OFFERED), `REJECTED` from any open status, `WITHDRAWN` only by the student. UI stages: Applied, Interview, Offer, Closed. `changeApplicationStatus` validates, updates guarded by the old status (a concurrent change gets 409 `STALE_STATUS`) and writes an `ApplicationEvent` in one transaction.
+- **Applying** ([services/job.service.ts](backend/src/services/job.service.ts)): published jobs only; a student outside the CGPA, branch, batch or deadline rules gets 422 `NOT_ELIGIBLE` with the reasons; the application stores `fitScore`, `fitSnapshot` and `resumeSnapshot` (the evidence-backed resume and its claim summary as sent). Job list and detail return one `company` (ingested jobs have no recruiter).
+- **Job admin** ([services/jobAdmin.service.ts](backend/src/services/jobAdmin.service.ts)): shared edit and status changes (publish needs a title, description and a required skill, and a deadline not in the past; closed stays closed; only a draft without applicants can be deleted). A recruiter's calls are scoped to their own jobs.
+- **Recruiter portal** ([routes/recruiterPortal.routes.ts](backend/src/routes/recruiterPortal.routes.ts), [services/recruiterPortal.service.ts](backend/src/services/recruiterPortal.service.ts)), role `RECRUITER`, everything scoped to the recruiter's company (another recruiter's data is a 404):
+
+  | Route | Purpose |
+  |---|---|
+  | `GET/PUT /recruiter/me` | company and recruiter profile (name locked after the first save; joins an existing company of the same normalised name) |
+  | `GET/POST /recruiter/jobs`, `GET/PATCH/DELETE /recruiter/jobs/:id` | own jobs; create from `{ jobDescription }` (parsed) or fields; warns about a possible duplicate |
+  | `POST /recruiter/jobs/:id/publish|pause|close` | status |
+  | `GET /recruiter/jobs/:id/applicants?stage=&minFit=&eligibleOnly=` | **ranked shortlist** with fit, matched, gaps, claim summary |
+  | `GET /recruiter/applications/:id` | applicant evidence view: skills with proof, fit now and at apply, resume snapshot, timeline |
+  | `PATCH /recruiter/applications/:id/status` | validated transition with a note |
+
+- **Placement portal** ([routes/placement.routes.ts](backend/src/routes/placement.routes.ts), [services/placement.service.ts](backend/src/services/placement.service.ts)), role `PLACEMENT`:
+
+  | Route | Purpose |
+  |---|---|
+  | `POST /placement/ingest/paste` | partner or alumni posting text, with optional `company`, `title`, `location`, `sourceLabel` |
+  | `POST /placement/ingest/api` | pull from Remotive (or its fixtures) |
+  | `GET /placement/jobs`, `GET/PATCH /placement/jobs/:id`, `POST /placement/jobs/:id/publish|pause|close` | review and fix parsed openings |
+  | `POST /placement/rank` | rank a batch against `{ jobId }` or a pasted `{ jobDescription }` (never saved), with institution, branch, batch and CGPA filters |
+  | `GET /placement/applications`, `GET /placement/applications/:id`, `PATCH /placement/applications/:id/status` | the shared pipeline board |
+  | `GET /placement/students`, `GET /placement/stats` | readiness table and dashboard counts |
+
+- **Student additions:** `GET /jobs?withFit=true` (cards with a fit, sorted by it), `GET /jobs/:id/fit`, `POST /jobs/:id/resume`, `GET /students/me/resumes/:id/claim-check`, `GET /students/me/recommendations`.
+- **Auth:** `PLACEMENT` is a third role. `RECRUITER_SIGNUP_CODE` and the new optional `PLACEMENT_SIGNUP_CODE` are the only way to register as those roles; asking for a privileged role without its code is a 403 (this used to create a recruiter without any code).
+- **Seed** ([prisma/seed.ts](backend/prisma/seed.ts), `bun run prisma/seed.ts`): SYNTHETIC demo data and idempotent. Skills and aliases, a placement user, two recruiters with companies, 12 students (strong, padded, GitHub-only, low CGPA, wrong branch, wrong batch), one Acme opening that arrives from four places and ends up as one job, five API fixture jobs, and applications at several stages. Password for every demo account is `Demo@12345` (emails end in `@demo.placementhub.test`; the script prints them). It writes to the database in `backend/.env`.
+
+### Database ([prisma/schema.prisma](backend/prisma/schema.prisma))
+Migrations: `init`, `add_parsed_resume`, `20261017100000_auth_and_drift` and `20261017120000_placement_mvp`. The last two are idempotent SQL. `auth_and_drift` creates what the auth code needs but the first two never did (`AuthSession`, `User.passwordHash`, a required email, an optional `StudentProfile.institutionId`); a database built only from `init` and `add_parsed_resume` fails at login with "The table public.AuthSession does not exist". `placement_mvp` adds the `PLACEMENT` role, score columns on `StudentSkill`, job ingestion fields and application snapshots. Applying all four to an empty database leaves no difference from `schema.prisma`. The remote database also drifted earlier (optional `institutionId`) without a migration file, so apply the new one with the helper instead of `prisma migrate`:
+
+```
+cd backend
+bun run prisma/apply-sql.mjs prisma/migrations/20261017100000_auth_and_drift/migration.sql prisma/migrations/20261017120000_placement_mvp/migration.sql
+bunx prisma generate --config prisma7.config.ts
+bun run prisma/seed.ts          # optional demo data
+```
+
+- **Used by code:** `User` (roles STUDENT, RECRUITER, PLACEMENT), `AuthSession`, `ParsedResume`, `StudentProfile`, `Institution`, `Skill`, `SkillAlias`, `StudentSkill` (status plus `assessmentScore`, `githubScore`, `combinedScore`, `evidenceStrength`, `scoredAt`), `SkillEvidence`, `Project`, `ProjectSkill`, `Company`, `RecruiterProfile`, `JobPosting` (now with a direct `companyId`, optional `recruiterProfileId`, `origin`, `dedupeKey`, `sourceCount`, `parseMethod`), `JobSkillRequirement`, `JobEligibleBranch`, `JobEligibleGraduationYear`, `JobSource` (with `sourceLabel`), `Application` (with `fitScore`, `fitSnapshot`, `resumeSnapshot`), `ApplicationEvent`.
+- **Not used:** `SkillEvidence` source types `PROJECT` and `CERTIFICATE`; `Project.status` is never set to `EVALUATED` (projects are not evaluated). Alumni and interview-question tables do not exist.
+- The assessment scorecard (questions and answers) is still only in memory; the per-skill proof and numeric scores are persisted.
 
 ### Tests ([backend/tests](backend/tests))
 `bun test`; Gemini and GitHub are mocked.
@@ -235,60 +274,68 @@ Two migrations exist (`init` and `add_parsed_resume`). The latest merge changed 
 - `skillScoring.test.ts`: assessment score math (total marks, null for unmapped skills, multi-skill split, aliases, bounds), GitHub status mapping, duplicate and alias handling, React not counting for TypeScript, evidence strength, conflicts, the 80/20 combined score and its null cases, every verdict and its flag, coverage of all resume skills (aliases merged, unassessed skills flagged, proof ids and references kept), and `buildSkillScores` (GitHub failure degrades to assessment-only, failures are not cached, incomplete reports, session ownership).
 - `github.test.ts` also feeds real `verifyGithub` output into the scorer (supported evidence gives 84 for an 80% assessment, nothing found stays at the assessment score, a rate-limited run is `incomplete` and produces no zero scores).
 
-The old assessment and Gemini-classifier tests were deleted with the old assessment code. There are no tests for the new assessment module, the student, job or auth routes, or the frontend.
+- `skills.test.ts`: alias resolution, no shared variants across skills, finding skills in free text.
+- `jobs.test.ts`: the rules parser (sections, eligibility, deadline, title and company), the LLM path and its fallbacks, normalisation, exact and fuzzy dedupe (subset skills merge, different cities do not, remote fits any city), merging requirements.
+- `fit.test.ts`: score math, required vs preferred, GitHub cap, aliases, null job, bands, explanations, eligibility.
+- `transitions.test.ts`: every allowed and refused pipeline move.
+- `resumeBuilder.test.ts`: verified-only skills, blocked claims with reasons, projects and experience checks, fact ids and proof on every bullet, one-page fit, determinism, HTML escaping, the claim check.
+
+There are no automated tests for the routes or the frontend. The services were exercised end to end against a throwaway local Postgres (see "Testing the API locally" under Known gaps).
 
 ## Frontend (`frontend/src`)
 
-Stack: Vite 8, React 19, TypeScript, Tailwind 4 (`@tailwindcss/vite`), react-router-dom 7, ESLint. No state library.
+Stack: Vite 8, React 19, TypeScript, Tailwind 4 (`@tailwindcss/vite`), react-router-dom 7, ESLint. No state or UI library. `bunx tsc -p tsconfig.app.json --noEmit` is clean and `bunx vite build` succeeds. **The screens have not been clicked through in a browser** (none was available); they were typechecked, linted and written against the real API response shapes.
 
-- **Routes** ([App.tsx](frontend/src/App.tsx)):
-  - Public pages under `MainLayout` (navbar and footer): `/` (HomePage), `/about`, `/jobs` (PublicJobsPage).
-  - Auth pages: `/signin`, `/signup`.
-  - Dashboard under `ProtectedRoute` and `DashboardLayout` (sidebar):
+- **Routes** ([App.tsx](frontend/src/App.tsx)): public `/`, `/about`, `/jobs`; `/signin`, `/signup` (Student, Recruiter or Placement; recruiter and placement need an invitation code). After signing in each role lands on its own home (`lib/roles.ts#homeFor`) and `ProtectedRoute allowedRoles` sends a wrong-role user there.
 
-    | Route | Page |
-    |---|---|
-    | `/dashboard` | Overview |
-    | `/dashboard/profile` | Profile |
-    | `/dashboard/resume` | Resume upload and list |
-    | `/dashboard/skills` | Skills |
-    | `/dashboard/assessment` | AI Assessment |
-    | `/dashboard/projects` | Projects |
-    | `/dashboard/jobs` | Jobs |
-    | `/dashboard/applications` | Applications |
+  | Area | Routes |
+  |---|---|
+  | Student (`DashboardLayout`) | `/dashboard` overview, `profile`, `resume` (upload, list, **Check claims**), `skills`, `assessment`, `projects`, `jobs` (cards with fit), `jobs/:jobId` (fit panel, gaps with actions, eligibility, sources, Apply), `jobs/:jobId/resume` (tailored resume preview, print to PDF, blocked claims, evidence ledger), `applications` (fit at apply, stage tracker, timeline) |
+  | Recruiter (`PortalLayout`, purple) | `/recruiter` my jobs, `profile` (company), `jobs/new` (paste a JD, review the parsed skills, publish), `jobs/:jobId` (ranked applicants, applicant drawer with proof, resume sent, timeline and status controls) |
+  | Placement (`PortalLayout`, emerald) | `/placement` overview, `ingest` (paste a posting, pull the job API), `jobs` (sources, edit skills, publish), `rank` (batch ranking, CSV export), `pipeline` (4-stage board, drawer with timeline), `students` (readiness table) |
 
-  - Any other path redirects to `/`.
-- **Auth** ([context/AuthContext.tsx](frontend/src/context/AuthContext.tsx), [api/auth.ts](frontend/src/api/auth.ts)): keeps `user` and `accessToken` in memory only, restores the session on load through the refresh cookie, and exposes `login`, `register`, `logout` and `checkSession`. `ProtectedRoute` redirects to `/signin` when signed out and supports an `allowedRoles` prop.
-- **API modules:**
-  - `api/student.ts`: a token-passing `request()` helper plus profile, institutions (with a hard-coded fallback list), resume, skill, project, job and application calls.
-  - `api/assessment.ts`: `generateAssessmentApi`, `fetchAssessmentQuestionsApi`, `submitAssessmentApi`, `fetchAssessmentScorecardApi`, plus types mirroring the backend.
-- **Assessment page** ([pages/dashboard/AssessmentPage.tsx](frontend/src/pages/dashboard/AssessmentPage.tsx), 832 lines): a local step machine `SELECT`, `GENERATING`, `RUNNER` (one question at a time with a countdown), `EVALUATING`, `SCORECARD`. The scorecard step now includes the skill verification panel between the skill breakdown and the question results.
-- **Skill verification panel** ([components/SkillVerificationPanel.tsx](frontend/src/components/SkillVerificationPanel.tsx)): loads `GET /assessments/:id/skill-scores` on mount (no GitHub calls). It has an optional GitHub username box and a "Verify with GitHub" button, which calls the POST. It shows:
-  - a GitHub status banner (`not_run`, `completed`, `incomplete`, `failed`);
-  - a count per verdict and a "flagged only" filter;
-  - one row per resume skill with its verdict badge, assessment, GitHub and combined scores, and the reason;
-  - an expandable "Show proof" section with assessment points and question ids, resume references, evidence links to GitHub files at a commit, and conflicts.
-  The API types and calls (`fetchSkillScoresApi`, `runSkillVerificationApi`) are in `api/assessment.ts`. The UI has not been run in a browser: `react-router-dom` is not installed in `frontend/node_modules` here, so only type and lint checks were done.
-- **Layout and shared components:** `layout/Navbar`, `Footer`, `MainLayout`, `DashboardLayout`; `common/ProtectedRoute`, `StatusBadge`.
-- **Unused leftovers:** `components/AuthCard.tsx`, `components/Dashboard.tsx` and `components/StudentModule.tsx` (879 lines) are no longer imported anywhere. The old assessment hook, screens and `api/assessmentApi.ts` were deleted.
+- **API modules** (`src/api`): `http.ts` (`request`, `requestData`, `ApiRequestError` with `status` and `code`; the base URL honours `VITE_API_BASE_URL` everywhere, including auth), `types.ts` (shared shapes: fit, gaps, jobs, generated resume, claim check, pipeline statuses and `allowedNext`), `match.ts` (student: jobs with fit, fit, resume builder, claim check, apply), `recruiterPortal.ts`, `placement.ts`, plus the older `student.ts`, `assessment.ts`, `auth.ts`.
+- **Shared UI:** `components/common` (`FitBadge`, `FitBar`, `Feedback`: `Loading`, `ErrorBox`, `Empty`, `PageHeader`; `StatusBadge`, `ProtectedRoute`), `components/layout` (`PortalLayout`, `DashboardLayout`, `Navbar`...), and per-area folders `components/student`, `components/recruiter`, `components/placement`. The repo's `react-hooks/set-state-in-effect` lint rule rejects fetch-in-effect, so each area has a small fetch hook (`useAsync`, `useApi`, `useQuery`).
+- **Resume preview** is the one place HTML is injected: the server-built page goes in a sandboxed `<iframe srcDoc sandbox="allow-same-origin allow-modals">` and "Print / Save as PDF" calls the iframe's `print()`.
+- **Auth** ([context/AuthContext.tsx](frontend/src/context/AuthContext.tsx)): `user` and `accessToken` in memory only, session restored through the refresh cookie. There is no automatic token refresh: after 15 minutes an API call fails with 401 and the user has to reload.
+- **Assessment page** (`pages/dashboard/AssessmentPage.tsx`) and the **skill verification panel** (`components/SkillVerificationPanel.tsx`) are unchanged from before.
+- **Lint:** the new files are lint clean. The older pages (`api/student.ts`, `AssessmentPage`, `OverviewPage`, `ProfilePage`, `ProjectsPage`, `SkillsPage`) still have `no-explicit-any` errors from before.
+- **Removed:** the unused `StudentModule`, `AuthCard` and `Dashboard` components.
+
+## Performance notes
+
+Where the time goes (from reading the code; nothing was measured against a real database or Gemini). A vector database would not help: nothing here does similarity search.
+- **Gemini calls** dominate generation and grading: output length is the main cost (6-12 questions with rubrics, or a batched grade with feedback). Each model-fallback attempt adds time when a model name is rejected.
+- **Resume upload:** `resume.service.saveResume` syncs every parsed skill with roughly 5-6 sequential queries per skill, awaited before the response. This is likely the slowest part of the upload and is not optimised yet.
+- **GitHub verification:** about 2 serial rounds per repo plus file fetches in batches of 4, 3 repos at a time, up to 150 requests. The latest-commit and language lookups now run together. Without `GITHUB_TOKEN` it is also rate limited.
+- **Every request** reloads the user from the database in `authenticate`, over SSL to a remote host.
+- **Timing logs:** `[Timing]` lines (assessment generated, assessment graded, GitHub verification) and `[SkillEvidence] saved ...` show which step is slow in the server log.
 
 ## Known gaps and gotchas
 
-- **Dead resume router:** `routes/index.ts` no longer mounts `routes/resume.ts` (`/resumes` and `/resumes/:id/github-verification`); the `/students/me/resume*` routes replaced it. GitHub verification is reachable only through `POST /assessments/:sessionId/skill-scores`, which needs a graded assessment session and is student-facing. A recruiter-facing or session-independent verification endpoint does not exist.
-- **Typecheck is not clean:** `bunx tsc --noEmit` in `backend/` reports 25 errors in the student, job and auth code (zod `.errors` usage, `string | string[]` params, and similar). None are in the scoring, persistence, assessment or GitHub modules, and the tests are unaffected. If you see `institutionId` errors, regenerate the Prisma client (`bunx prisma generate --config prisma7.config.ts`): the schema made it optional but a stale generated client still required it.
-- **Hidden AI fallbacks:** resume parsing, question generation and grading each fall back to heuristics or canned content when Gemini fails, without telling the user. A broken API key therefore still yields a "successful" resume parse (keyword skills only), a generic question bank and heuristic scores. Check server logs (`[ResumeParser]`, `[AssessmentService]`) to see which path ran.
-- **Only the proof is persisted, not the scores:** `StudentSkill.verificationStatus` and the `SkillEvidence` rows survive restarts, but the numeric assessment, GitHub and combined scores and the full GitHub report still live on the in-memory session. The assessment row's description holds the score as text. A numeric, queryable score per skill (needed for ranking and matching) would need a schema change.
-- **Persistence is untested against a real database:** the Prisma repository was type-checked, and the logic is tested with an in-memory fake, but nothing here has run against Postgres. Try one assessment end to end and check the `SkillEvidence` table.
-- **Verification only covers skills, and only what the resume lists:** claims about project features, experience and dates are not verified, and the assessment covers at most 12 skills per run, so the rest show as `unverified` until GitHub covers them. Skills with no catalog rule (tools such as VS Code, or soft skills) can only ever be `unverified`.
-- **Free-text grading fallback is weak:** if Gemini grading fails, free-text answers get heuristic scores, and the scorecard does not mark which questions were AI-graded versus heuristic. The per-skill assessment scores inherit this.
-- **Invalid Gemini model name:** the fallback lists include `gemini-3.8-flash`, which may not exist. A not-found error just moves to the next model.
-- **Sessions are in memory:** assessment sessions and scorecards are lost on backend restart, and results are never persisted. `GET .../scorecard` only works while the session lives.
-- **Prisma schema vs migrations:** the schema changed (optional `institutionId`) without a migration file, and the app relies on `apply-schema.mjs` against the remote DB. A fresh `prisma migrate` would not match.
-- **Loose TLS:** `config/prisma.ts` sets `ssl: { rejectUnauthorized: false }`.
-- **Dependency changes:** the backend dropped `@node-rs/argon2`, `@prisma/adapter-pg` and `@supabase/supabase-js` from `package.json`, but the code still imports the first two (`auth.service.ts` and `config/prisma.ts`), so a clean install would fail to resolve them. Please check `backend/package.json` and `bun.lock`. TypeScript was also downgraded to `^5.8.3`.
-- **Frontend API URLs:** `api/auth.ts` hard-codes `http://localhost:4000/api/v1`, while the other API modules honor `VITE_API_BASE_URL`.
-- **Stray debug logging:** `auth.routes.ts` has `console.log(result)` in register (prints tokens), and `student.routes.ts` has `console.log("control reach here!!")` in the resume upload handler.
-- **Job board is empty:** there is no recruiter UI, no job-creation route and no seed data.
-- **GitHub rate limits:** without `GITHUB_TOKEN`, GitHub allows only 60 requests per hour, which is roughly one verification.
-- **Unbuilt features:** see "Coverage today" in the project brief section: job ingestion and deduplication, matching and fit scores, truthful resume generation, the placement-team and recruiter side (posting jobs, status changes, batch ranking), project evaluation and evidence review.
-- **Root `README.md`** is a one-liner and `backend/README.md` covers setup only. This file is the fuller description.
+**Not built (cut for the hackathon):** alumni mapping and referrals, the company-wise interview-question bank, an endpoint that evaluates a portfolio project on its own (project technologies are checked through the skills), a server-side PDF (the resume is HTML; the browser prints it to PDF), a duplicate-review queue (fuzzy matches at 80 or above merge automatically, the rest stay separate), CSV import, and LLM rewording of bullets or explanations (deliberate: output stays deterministic).
+
+**Behaviour to know**
+- **Hidden AI fallbacks:** resume parsing, question generation and grading each fall back to heuristics or canned content when Gemini fails, without telling the user. Check server logs (`[ResumeParser]`, `[AssessmentService]`). Job parsing is the exception: `parseMethod` (`llm` or `rules`) is stored and shown.
+- **Matching reads stored scores:** a student's fit only changes after a new assessment or GitHub verification persists scores to `StudentSkill`. Skills outside the taxonomy are stored as custom skills and match only by exact name. Weights, bands and the GitHub-only cap are constants at the top of `matching/fit.ts`.
+- **Resume builder checks are heuristic:** the unverifiable-figure detector is a regex (percentages, "10k users", "team of 10"); vaguer boasts that name no number and no unverified skill pass as self-reported. Self-reported text appears on the resume but is labelled as such in the ledger.
+- **Job parser is heuristic without Gemini:** ambiguous words (Go, R, C, Excel, Oracle, Swift) are not picked up from free text, so check the parsed skills on the placement Openings page. Skills named only in a "benefits" or "about us" section are ignored on purpose.
+- **Dedupe thresholds:** merge at a similarity of 80 or more within one company and city (remote fits any city). A wrong merge hides a real opening, so the number is deliberately high; the job's source list shows what was merged.
+- **Applying is gated:** a student outside the CGPA, branch, batch or deadline rules gets 422 `NOT_ELIGIBLE`; missing profile data (no CGPA, branch or year) does not block, but is reported as "could not check".
+- **Verification only covers skills the resume lists**, and the assessment covers at most 12 skills per run; skills with no GitHub catalog rule (tools, soft skills) can only be `unverified`.
+- **Free-text grading fallback is weak:** if Gemini grading fails, free-text answers get heuristic scores and the scorecard does not mark which were AI-graded.
+- **Invalid Gemini model name:** the fallback lists include `gemini-3.8-flash`, which may not exist; a not-found error moves on to the next model.
+- **Assessment sessions are in memory:** sessions and scorecards are lost on restart (`GET .../scorecard` only works while the session lives). The per-skill proof and numeric scores are persisted.
+- **GitHub rate limits:** without `GITHUB_TOKEN`, GitHub allows 60 requests per hour (about one verification). Set a token for any demo that verifies live.
+- **Dead resume router:** `routes/resume.ts` is not mounted (the `/students/me/resume*` routes replaced it).
+- **TLS:** `config/prisma.ts` uses `rejectUnauthorized: false` for hosted databases (Supabase) and no TLS for a `localhost` / `127.0.0.1` database URL.
+
+**Housekeeping**
+- **Lockfiles:** `backend/package.json` now declares `@node-rs/argon2` and `@prisma/adapter-pg` (the code imports both; a clean install used to fail). If you run `bun install` behind a corporate registry, the lockfile gets rewritten with that registry's URLs: restore it or install with `--registry https://registry.npmjs.org` before committing.
+- **Typecheck:** `bunx tsc --noEmit` is clean in `backend/`, and `bunx tsc -p tsconfig.app.json --noEmit` in `frontend/`. If you see `institutionId` or `PLACEMENT` errors, regenerate the Prisma client (`bunx prisma generate --config prisma7.config.ts`).
+- **Remote database:** apply the new migration before running the new code (see "Database"). Until then `StudentSkill` has no score columns and the `PLACEMENT` role does not exist.
+- **Env vars added:** `PLACEMENT_SIGNUP_CODE` (optional; without it nobody can register as placement staff), `INGEST_USE_FIXTURES` (`true` reads `backend/fixtures/jobs/remotive.json` instead of calling the API), `JOB_PARSE_LLM` (`false` forces the rules parser). All are in `backend/.env.example`.
+
+**Testing the API locally without touching the shared database.** `config/index.ts` loads `backend/.env` with `override: true`, so a shell variable cannot redirect it. To run the whole API against a throwaway Postgres: start one (`backend/node_modules/.bin/pglite-server.exe --db=memory:// --port=5544 -m 20`), copy `backend/` (without `.env`) to a scratch folder with its own `.env` whose `DATABASE_URL` is `postgresql://postgres:postgres@127.0.0.1:5544/postgres`, create the tables (`prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script`), run `prisma/seed.ts`, then `src/server.ts`. That is how the services in this file were verified end to end.
+
+**Root `README.md`** is a one-liner and `backend/README.md` covers setup only. This file is the fuller description.

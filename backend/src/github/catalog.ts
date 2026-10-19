@@ -1,6 +1,8 @@
 // Deterministic detection rules per technology. Keys are canonical resume names (lower-cased on lookup).
 // Anything not listed here is reported as "not_checked" rather than guessed.
 
+import { canonicalSkill } from '../skills/canonical.ts';
+
 export interface TechRule {
     /** Package names in dependency manifests (npm, pip, Maven, Cargo, go.mod ...). */
     packages?: string[];
@@ -155,7 +157,15 @@ export const CATALOG: Record<string, TechRule> = {
     npm: { files: [/(^|\/)package-lock\.json$/] },
 };
 
-export const lookupRule = (canonical: string): TechRule | undefined => CATALOG[canonical.trim().toLowerCase()];
+// Catalog keys re-indexed by their taxonomy name, so "WebSockets" finds the "websocket" rule.
+const BY_TAXONOMY_NAME = new Map<string, TechRule>(
+    Object.entries(CATALOG).map(([key, rule]) => [(canonicalSkill(key) ?? key).toLowerCase(), rule]),
+);
+
+export const lookupRule = (canonical: string): TechRule | undefined => {
+    const key = canonical.trim().toLowerCase();
+    return CATALOG[key] ?? BY_TAXONOMY_NAME.get((canonicalSkill(key) ?? key).toLowerCase());
+};
 
 // Names that are intentionally not verifiable from a repository.
 export const NOT_CHECKABLE_NOTE = 'No automated GitHub check exists for this item; it was not examined.';

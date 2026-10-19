@@ -1,10 +1,11 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { homeFor, type Role } from "../../lib/roles";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ("STUDENT" | "RECRUITER")[];
+  allowedRoles?: Role[];
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -28,7 +29,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    // Signed in, but this area belongs to another role: send them to their own home.
+    return <Navigate to={homeFor(user.role)} replace />;
   }
 
   return <>{children}</>;

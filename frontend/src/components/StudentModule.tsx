@@ -15,12 +15,12 @@ import {
   applyToJob,
   fetchApplications,
   withdrawApplicationApi,
-  Institution,
-  StudentProfileData,
-  StudentSkill,
-  ProjectData,
-  JobData,
-  ApplicationData,
+  type Institution,
+  type StudentProfileData,
+  type StudentSkill,
+  type ProjectData,
+  type JobData,
+  type ApplicationData,
   FIXED_INSTITUTIONS,
 } from "../api/student";
 
@@ -30,7 +30,7 @@ export const StudentModule: React.FC = () => {
 
   // Profile state
   const [institutions, setInstitutions] = useState<Institution[]>(FIXED_INSTITUTIONS);
-  const [profile, setProfile] = useState<StudentProfileData | null>(null);
+  const [, setProfile] = useState<StudentProfileData | null>(null);
   const [profileForm, setProfileForm] = useState({
     name: "",
     institutionId: "",

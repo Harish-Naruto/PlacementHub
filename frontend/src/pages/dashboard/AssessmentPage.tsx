@@ -35,7 +35,7 @@ export const AssessmentPage: React.FC = () => {
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
 
   // Timer Ref
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ---------------------------------------------------------------------------
   // Load Resumes

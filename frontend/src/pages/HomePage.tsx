@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { homeFor } from "../lib/roles";
 
 export const HomePage: React.FC = () => {
   const { user } = useAuth();
@@ -31,7 +32,7 @@ export const HomePage: React.FC = () => {
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             {user ? (
               <Link
-                to="/dashboard"
+                to={homeFor(user.role)}
                 className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-xl shadow-blue-500/25 hover:scale-105 transition-all"
               >
                 Go to My Dashboard →

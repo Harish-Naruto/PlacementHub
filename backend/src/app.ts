@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import config from "./config/index.ts";
 import { errorHandler } from "./utils/apiError.ts";
+import { isOriginAllowed } from "./utils/cors.ts";
 import routes from "./routes/index.ts";
 
 const app = express();
@@ -19,7 +20,14 @@ const limiter = rateLimit({
 
 app.use(
   cors({
-    origin: config.allowed_origins,
+    origin(origin, callback) {
+      if (isOriginAllowed(origin, config.allowedOrigins, config.isProduction())) {
+        callback(null, true);
+        return;
+      }
+      console.warn(`[CORS] blocked origin ${origin}. Add it to FRONTEND_URL (comma separated) in backend/.env.`);
+      callback(null, false);
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   }),

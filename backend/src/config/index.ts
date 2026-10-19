@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseOrigins } from "../utils/cors.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(__dirname, "../../.env"), override: true });
@@ -50,6 +51,8 @@ const refreshTokenTtlDays = optionalInt("REFRESH_TOKEN_TTL_DAYS", 7);
 // ---------------------------------------------------------------------------
 
 const recruiterSignupCode = required("RECRUITER_SIGNUP_CODE");
+// Optional: when unset, nobody can register as a placement-team user.
+const placementSignupCode = process.env.PLACEMENT_SIGNUP_CODE || undefined;
 
 // ---------------------------------------------------------------------------
 // Export
@@ -60,8 +63,8 @@ const config = {
   port: optionalInt("PORT", 4000),
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
 
-  // CORS
-  allowed_origins: process.env.FRONTEND_URL || "http://localhost:5173",
+  // CORS: FRONTEND_URL may hold several origins separated by commas. A trailing slash is ignored.
+  allowedOrigins: parseOrigins(process.env.FRONTEND_URL),
 
   // Rate limiting
   rate_limit_window_minutes: () => optionalInt("RATE_LIMIT_WINDOW_MINUTES", 15),
@@ -94,6 +97,7 @@ const config = {
 
   // Recruiter
   recruiterSignupCode,
+  placementSignupCode,
 
   // Computed helpers
   isProduction: () => (process.env.NODE_ENV || "development") === "production",

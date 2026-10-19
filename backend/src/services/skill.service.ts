@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.ts";
 import { ApiError } from "../utils/apiError.ts";
 import type { AddSkillInput, UpdateSkillInput } from "../validators/student.validator.ts";
+import { skillInfo } from "../skills/canonical.ts";
 
 // ---------------------------------------------------------------------------
 // Map SkillVerificationStatus to friendly labels
@@ -14,17 +15,12 @@ export function mapVerificationStatus(status: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Normalize skill name (for alias resolution and dedup)
-// ---------------------------------------------------------------------------
-function normalizeSkillName(name: string): string {
-  return name.trim().toLowerCase();
-}
-
-// ---------------------------------------------------------------------------
 // Resolve skill by name or alias
 // ---------------------------------------------------------------------------
-export async function resolveOrCreateSkill(skillName: string) {
-  const normalized = normalizeSkillName(skillName);
+export async function resolveOrCreateSkill(rawName: string) {
+  // The shared taxonomy decides the canonical name, so "ReactJS" and "React.js" are one skill row.
+  const known = skillInfo(rawName);
+  const skillName = known?.name ?? rawName.trim();
 
   // Try exact name match first (case-insensitive)
   let skill = await prisma.skill.findFirst({
@@ -39,10 +35,17 @@ export async function resolveOrCreateSkill(skillName: string) {
   });
   if (alias) return alias.skill;
 
-  // Create new custom skill
-  skill = await prisma.skill.create({
-    data: { name: skillName.trim() },
-  });
+  // Create the skill (with its category when the taxonomy knows it)
+  try {
+    skill = await prisma.skill.create({
+      data: { name: skillName, ...(known ? { category: known.category } : {}) },
+    });
+  } catch (err) {
+    // Another request created the same skill a moment ago (unique name): use that one.
+    const raced = await prisma.skill.findFirst({ where: { name: { equals: skillName, mode: "insensitive" } } });
+    if (!raced) throw err;
+    skill = raced;
+  }
 
   return skill;
 }

@@ -1,0 +1,17 @@
+FROM oven/bun:1.2.21-alpine
+WORKDIR /var/www/kurukshetra-web
+
+COPY ./frontend/package.json ./package.json
+COPY ./frontend/bun.lock ./bun.lock
+COPY ./frontend ./
+
+# Install all workspace deps
+RUN bun install --lockfile
+
+# Build only server and its dependencies
+RUN bun run build
+
+WORKDIR /var/www/kurukshetra-web
+EXPOSE 5173
+
+CMD ["bun", "run", "preview", "--host", "0.0.0.0", "--port", "5173"]

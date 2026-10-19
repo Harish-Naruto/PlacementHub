@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { homeFor, type Role } from "../lib/roles";
 
 export const SignInPage: React.FC = () => {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [role, setRole] = useState<"STUDENT" | "RECRUITER">("STUDENT");
+  const [role, setRole] = useState<Role>("STUDENT");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ export const SignInPage: React.FC = () => {
   // If already logged in, redirect to dashboard
   useEffect(() => {
     if (user) {
-      const from = (location.state as any)?.from?.pathname || "/dashboard";
+      const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || homeFor(user.role);
       navigate(from, { replace: true });
     }
   }, [user, navigate, location]);
@@ -27,9 +28,9 @@ export const SignInPage: React.FC = () => {
     setError(null);
     try {
       await login(email, password, role);
-      navigate("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Failed to sign in. Please verify your credentials.");
+      // The effect above sends the user to their role's home once the session is set.
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : "Failed to sign in. Please verify your credentials.");
     } finally {
       setLoading(false);
     }
@@ -76,7 +77,7 @@ export const SignInPage: React.FC = () => {
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            Student Candidate
+            Student
           </button>
           <button
             type="button"
@@ -87,7 +88,18 @@ export const SignInPage: React.FC = () => {
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            Hiring Recruiter
+            Recruiter
+          </button>
+          <button
+            type="button"
+            onClick={() => setRole("PLACEMENT")}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+              role === "PLACEMENT"
+                ? "bg-white text-emerald-600 shadow-sm"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            Placement
           </button>
         </div>
 
@@ -130,10 +142,12 @@ export const SignInPage: React.FC = () => {
             className={`w-full py-3 rounded-xl text-sm font-bold text-white shadow-md transition-all ${
               role === "STUDENT"
                 ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/25"
-                : "bg-purple-600 hover:bg-purple-700 shadow-purple-500/25"
+                : role === "RECRUITER"
+                  ? "bg-purple-600 hover:bg-purple-700 shadow-purple-500/25"
+                  : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/25"
             } disabled:opacity-50`}
           >
-            {loading ? "Signing in..." : `Sign In as ${role === "STUDENT" ? "Student" : "Recruiter"}`}
+            {loading ? "Signing in..." : `Sign In as ${role === "STUDENT" ? "Student" : role === "RECRUITER" ? "Recruiter" : "Placement Team"}`}
           </button>
         </form>
 

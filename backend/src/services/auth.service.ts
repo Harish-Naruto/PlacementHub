@@ -107,13 +107,14 @@ async function createSession(userId: string) {
 export async function register(input: RegisterInput) {
   const { email, name, password, role: inputRole, invitationCode } = input;
 
-  // Determine role from input (defaults to STUDENT if omitted)
-  let role: UserRole = inputRole || "STUDENT";
+  // Students register freely. Recruiter and placement accounts need their invitation code.
+  let role: UserRole = "STUDENT";
   if (invitationCode) {
-    if (invitationCode !== config.recruiterSignupCode) {
-      throw new ApiError("Invalid invitation code", 403);
-    }
-    role = "RECRUITER";
+    if (invitationCode === config.recruiterSignupCode) role = "RECRUITER";
+    else if (config.placementSignupCode && invitationCode === config.placementSignupCode) role = "PLACEMENT";
+    else throw new ApiError("Invalid invitation code", 403);
+  } else if (inputRole && inputRole !== "STUDENT") {
+    throw new ApiError(`An invitation code is required to register as ${inputRole}`, 403);
   }
 
   // Check for existing email

@@ -1,10 +1,11 @@
-const API_BASE_URL = "http://localhost:4000/api/v1";
+import { API_BASE_URL } from "./http";
+import type { Role } from "../lib/roles";
 
 export interface User {
   id: string;
   email: string;
   name: string | null;
-  role: "STUDENT" | "RECRUITER";
+  role: Role;
   profileImage: string | null;
   createdAt: string;
 }
@@ -27,7 +28,7 @@ export async function registerApi(payload: {
   email: string;
   name: string;
   password: string;
-  role?: "STUDENT" | "RECRUITER";
+  role?: Role;
   invitationCode?: string;
 }): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -47,7 +48,7 @@ export async function registerApi(payload: {
 export async function loginApi(payload: {
   email: string;
   password: string;
-  role?: "STUDENT" | "RECRUITER";
+  role?: Role;
 }): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",

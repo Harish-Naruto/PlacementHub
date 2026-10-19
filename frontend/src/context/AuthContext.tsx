@@ -6,17 +6,18 @@ import {
   logoutApi,
   refreshApi,
 } from "../api/auth";
+import type { Role } from "../lib/roles";
 
 interface AuthContextType {
   user: User | null;
   accessToken: string | null;
   loading: boolean;
-  login: (email: string, password: string, role?: "STUDENT" | "RECRUITER") => Promise<void>;
+  login: (email: string, password: string, role?: Role) => Promise<void>;
   register: (payload: {
     name: string;
     email: string;
     password: string;
-    role?: "STUDENT" | "RECRUITER";
+    role?: Role;
     invitationCode?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
@@ -51,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (
     email: string,
     password: string,
-    role?: "STUDENT" | "RECRUITER"
+    role?: Role
   ) => {
     const res = await loginApi({ email, password, role });
     setUser(res.data.user);
@@ -62,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     name: string;
     email: string;
     password: string;
-    role?: "STUDENT" | "RECRUITER";
+    role?: Role;
     invitationCode?: string;
   }) => {
     const res = await registerApi(payload);

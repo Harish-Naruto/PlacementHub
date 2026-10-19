@@ -44,6 +44,20 @@ export const prismaSkillEvidenceRepo: SkillEvidenceRepo = {
     await prisma.studentSkill.update({ where: { id: studentSkillId }, data: { verificationStatus: status } });
   },
 
+  async setScores(studentSkillId, scores) {
+    // `undefined` leaves a column alone, so a run without a score never erases an earlier one.
+    await prisma.studentSkill.update({
+      where: { id: studentSkillId },
+      data: {
+        assessmentScore: scores.assessmentScore ?? undefined,
+        githubScore: scores.githubScore ?? undefined,
+        combinedScore: scores.combinedScore ?? undefined,
+        evidenceStrength: scores.evidenceStrength,
+        scoredAt: new Date(),
+      },
+    });
+  },
+
   async upsertEvidence(studentSkillId, e) {
     // System-evaluated rows are stamped as reviewed; plain observations are not.
     const reviewedAt = e.status === "OBSERVED" ? null : new Date();

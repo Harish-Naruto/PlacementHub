@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { homeFor } from "../../lib/roles";
 
 export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -71,12 +72,12 @@ export const Navbar: React.FC = () => {
           {user ? (
             <div className="flex items-center gap-3">
               <Link
-                to="/dashboard"
+                to={homeFor(user.role)}
                 className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 transition group"
               >
                 <div
                   className={`w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold ${
-                    user.role === "STUDENT" ? "bg-blue-600" : "bg-purple-600"
+                    user.role === "STUDENT" ? "bg-blue-600" : user.role === "RECRUITER" ? "bg-purple-600" : "bg-emerald-600"
                   }`}
                 >
                   {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
@@ -155,7 +156,7 @@ export const Navbar: React.FC = () => {
             {user ? (
               <>
                 <Link
-                  to="/dashboard"
+                  to={homeFor(user.role)}
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full py-2.5 text-center text-sm font-semibold text-white bg-blue-600 rounded-xl"
                 >

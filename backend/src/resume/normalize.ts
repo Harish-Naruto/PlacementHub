@@ -1,20 +1,9 @@
 import type { LlmResume, ParsedResume } from './schema';
 import { SCHEMA_VERSION } from './schema';
+import { canonicalSkill } from '../skills/canonical.ts';
 
-// Deliberately tiny. Java and JavaScript must stay distinct; don't guess abbreviations.
-const ALIASES: Record<string, string> = {
-    'react': 'React',
-    'react.js': 'React',
-    'reactjs': 'React',
-    'typescript': 'TypeScript',
-    'node': 'Node.js',
-    'nodejs': 'Node.js',
-    'node.js': 'Node.js',
-    'postgres': 'PostgreSQL',
-    'postgresql': 'PostgreSQL',
-};
-
-export const canonicalize = (name: string): string | null => ALIASES[name.trim().toLowerCase()] ?? null;
+// Skill names resolve through the shared taxonomy (src/skills). Java and JavaScript stay distinct skills.
+export const canonicalize = (name: string): string | null => canonicalSkill(name);
 
 // Returns a clean https URL, or null if it isn't one. Original text is not changed elsewhere.
 export const safeUrl = (raw: string): string | null => {
