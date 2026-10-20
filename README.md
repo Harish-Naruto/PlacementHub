@@ -15,6 +15,28 @@ PlacementHub is a full-stack placement platform that helps students, recruiters,
 - **Backend:** Bun, Express, TypeScript, Prisma, PostgreSQL
 - **Frontend:** React, Vite, TypeScript, Tailwind CSS
 
+## System Architecture
+
+PlacementHub follows a client-server architecture with a single frontend and a centralized API:
+
+1. **Frontend (React + Vite)**  
+   Student, recruiter, and placement users interact through role-based screens in the web app.
+
+2. **Backend API (Express on Bun)**  
+   Handles authentication, role-based access, job ingestion, skill matching, resume generation, and application pipeline updates.
+
+3. **Database (PostgreSQL via Prisma)**  
+   Stores users, skills, jobs, applications, recruiter/placement data, and resume-related records.
+
+4. **External Integrations**  
+   Optional services (such as AI parsing and GitHub verification) enrich skill evidence and job parsing when configured.
+
+### Request Flow (High Level)
+
+- A user action in the frontend calls backend REST endpoints.
+- The backend validates input, applies business rules, and reads/writes data through Prisma.
+- Results return to the frontend for ranking, resume generation, and pipeline views.
+
 ## Repository Structure
 
 - `/backend` – API, business logic, Prisma schema/migrations, tests
