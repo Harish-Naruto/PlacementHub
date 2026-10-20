@@ -1,85 +1,78 @@
 # PlacementHub
 
-A placement platform that matches students to openings on **verified evidence of their skills**, not claims, and helps them apply with **tailored, entirely truthful resumes**. Built in 24 hours for the TechSummitTrainers problem statement.
+PlacementHub is a full-stack placement platform that helps students, recruiters, and placement teams manage campus hiring with evidence-based skill matching.
 
-Freshers send one generic resume full of claims they cannot back up. Placement teams forward openings by hand over WhatsApp. Companies want shortlists they can trust. PlacementHub puts evidence in the middle of all three.
+## Highlights
 
-## What it does
+- Ingest jobs from pasted descriptions and external sources
+- Match students to jobs using normalized skill data
+- Generate truthful, job-specific resumes backed by evidence
+- Track applications through a shared pipeline
+- Support dedicated student, recruiter, and placement workflows
 
-| Brief | What you can do |
-|---|---|
-| **Openings from many sources** | The placement team pastes a WhatsApp-style posting, an alumni referral, or pulls from a job API. The same opening arriving twice ("ReactJS Developer, Acme Pvt Ltd" and "React.js developer - ACME") becomes **one job with several sources**. Required and preferred skills are parsed and normalised ("ReactJS", "React.js", "React" are one skill). |
-| **Skills from evidence** | Each skill carries its proof: AI assessment questions and commit-pinned GitHub files. Self-declared skills are clearly marked as claims. |
-| **Fit score with reasons** | For every student and opening: a score, a plain-language explanation and the **specific gaps**, each with a next action. Eligibility (CGPA, branch, batch, deadline) is shown separately and never hides skill fit. |
-| **Truthful one-page resume** | Generated per opening. **Every bullet traces to evidence.** Unsupported skills, project technologies and unverifiable figures ("improved speed by 40%") are blocked, with the reason and how to fix it. An uploaded resume gets a **claim check** that flags what is not backed by evidence yet. |
-| **Shared pipeline** | Applied, Interview, Offer, visible to the student, the recruiter and the placement team, with a logged history. The placement team can **rank a whole batch against one pasted job description**. |
-| **Recruiter portal** | Post a job by pasting its description, then see a **ranked shortlist** with the proof behind every skill and the exact resume each candidate sent. |
+## Tech Stack
 
-Not built: alumni mapping and the interview-question bank (the optional extras).
+- **Backend:** Bun, Express, TypeScript, Prisma, PostgreSQL
+- **Frontend:** React, Vite, TypeScript, Tailwind CSS
 
-"Unsupported" and "unverified" always mean *not backed by evidence yet*, never "false".
+## Repository Structure
 
-## Design choices worth knowing
+- `/backend` – API, business logic, Prisma schema/migrations, tests
+- `/frontend` – web application UI
+- `/docker` – container-related setup files
 
-- **Deterministic where it matters.** Matching, explanations, gaps and resume bullets are plain code, not LLM output, so they are reproducible and can never name a skill that is not in the evidence. Gemini is used only to parse resumes and job descriptions and to run the assessment; every one of those has a non-LLM fallback and the job parser records which one ran.
-- **One skill vocabulary** (`backend/src/skills`) shared by resume parsing, job parsing, scoring and matching.
-- **Pure, tested modules** (`matching/`, `jobs/`, `resumeBuilder/`, `pipeline/`, `scoring/`, `github/`): no database or network, 166 unit tests.
-- **Honest ranking.** A padded resume with a dozen claimed skills and no evidence scores near zero and ranks below a student with fewer, proven skills.
+## Quick Start
 
-## Run it
-
-Requirements: [Bun](https://bun.sh), a Postgres database (Supabase works), and optionally a Gemini API key and a GitHub token.
+### 1) Install dependencies
 
 ```bash
-# 1. Install
-cd backend && bun install && cd ../frontend && bun install && cd ..
+cd /home/runner/work/PlacementHub/PlacementHub/backend && bun install
+cd /home/runner/work/PlacementHub/PlacementHub/frontend && bun install
+```
 
-# 2. Configure the backend
-cp backend/.env.example backend/.env
-#   fill in DATABASE_URL, JWT_ACCESS_SECRET (32+ chars), RECRUITER_SIGNUP_CODE, PLACEMENT_SIGNUP_CODE,
-#   GEMINI_API_KEY and GITHUB_TOKEN (recommended: without a token GitHub allows ~1 verification per hour)
+### 2) Configure environment
 
-# 3. Create the schema changes and (optionally) demo data.
-#    A brand-new empty database first needs the two older migrations:
-#    prisma/migrations/20261016133541_init and 20261016180000_add_parsed_resume (same command, run once).
-cd backend
-bun run prisma/apply-sql.mjs prisma/migrations/20261017100000_auth_and_drift/migration.sql prisma/migrations/20261017120000_placement_mvp/migration.sql
+```bash
+cp /home/runner/work/PlacementHub/PlacementHub/backend/.env.example /home/runner/work/PlacementHub/PlacementHub/backend/.env
+```
+
+Update values in `/home/runner/work/PlacementHub/PlacementHub/backend/.env` (at minimum database URL, auth secrets, and signup codes).
+
+### 3) Apply database setup
+
+Run the Prisma SQL/migration steps used by your environment, then generate Prisma client:
+
+```bash
+cd /home/runner/work/PlacementHub/PlacementHub/backend
 bunx prisma generate --config prisma7.config.ts
-bun run prisma/seed.ts          # synthetic demo data; prints the logins
-cd ..
+```
 
-# 4. Start both (backend :4000, frontend :5173)
+(Optional) Seed demo data:
+
+```bash
+bun run prisma/seed.ts
+```
+
+### 4) Start the app
+
+From repository root:
+
+```bash
+cd /home/runner/work/PlacementHub/PlacementHub
 bun run dev
 ```
 
-The seed creates synthetic accounts (password `Demo@12345`, emails end in `@demo.placementhub.test`): `placement@`, `recruiter.acme@`, `recruiter.globex@`, and twelve students such as `asha@` (strong, well evidenced), `karan@` (padded resume, little evidence), `neha@` (strong skills, CGPA below the cut-off).
+- Backend: `http://localhost:4000`
+- Frontend: `http://localhost:5173`
 
-Register your own accounts in the app: students sign up freely; recruiters and the placement team need the invitation codes from `backend/.env`.
+## Useful Commands
 
-## Five-minute demo
+From `/home/runner/work/PlacementHub/PlacementHub/backend`:
 
-1. **Placement team** (`placement@`): *Ingest openings*, paste a posting, then pull from the job API. Watch the same opening merge into one job with several sources.
-2. **Student** (`asha@`): *Campus Jobs* shows every opening ranked by evidence-backed fit. Open one: the score, the explanation, the gaps and what to do about each.
-3. **Student**: *Build tailored resume*. Every bullet has its proof; the "Not on this resume" panel shows what was left out and why. Print it to PDF.
-4. **Student** (`karan@`): the same opening, a near-zero fit and a long list of blocked claims. On *Resume Upload*, run *Check claims*.
-5. **Student**: apply. (`neha@` is refused with the reason: CGPA below the minimum.)
-6. **Recruiter** (`recruiter.acme@`): open the job, see the ranked applicants, open one to see the proof behind every skill and the resume that was sent, then move them to *Interview*.
-7. **Placement team**: *Batch ranking*: paste a job description, rank the whole batch, export the CSV. *Pipeline* shows the same application moving.
+- `bun run test` – run backend tests
+- `bun run build` – type-check backend
 
-## Layout
+From `/home/runner/work/PlacementHub/PlacementHub/frontend`:
 
-```
-backend/    Express 5 + TypeScript on Bun, Prisma 7 + Postgres
-  src/skills       the shared skill vocabulary
-  src/jobs         job parsing and cross-source dedupe
-  src/matching     fit score, explanations, gaps, ranking
-  src/resumeBuilder  truthful resume and uploaded-resume claim check
-  src/pipeline     application status rules
-  src/scoring, src/github, src/assessment   evidence: assessments and GitHub verification
-  prisma/seed.ts   demo data
-frontend/   React 19 + Vite + Tailwind 4: student dashboard, recruiter portal, placement portal
-CONTEXT.md  the detailed description of every module (start here when changing code)
-IMPLEMENTATION_PLAN.md  the plan this was built from
-```
-
-Tests: `cd backend && bun test`. Types: `bunx tsc --noEmit` (backend) and `bunx tsc -p tsconfig.app.json --noEmit` (frontend).
+- `bun run lint` – lint frontend
+- `bun run build` – type-check and build frontend
