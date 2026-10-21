@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Landing page screenshot placeholder">
+  <rect width="1280" height="720" fill="#f1f5f9"/>
+  <rect x="0" y="0" width="1280" height="44" fill="#e2e8f0"/>
+  <circle cx="24" cy="22" r="6" fill="#f87171"/><circle cx="46" cy="22" r="6" fill="#fbbf24"/><circle cx="68" cy="22" r="6" fill="#4ade80"/>
+  <rect x="2" y="46" width="1276" height="670" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="10 8"/>
+  <text x="640" y="360" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="40" font-weight="600" fill="#334155">Landing page</text>
+  <text x="640" y="410" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="22" fill="#64748b">Screenshot placeholder - replace docs/screenshots/landing.svg with a real capture</text>
+</svg>
